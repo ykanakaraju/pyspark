@@ -1,0 +1,8 @@
+1, Satya, Male, 25, 8501099876
+2, Vivek, Male, 27, 5676598453
+3, Rahim, Male, 25, 5676556455
+4, Sandra, Female, 28, 8508899001
+5, Keerti, Female, 15, 8567934568
+6, Sundar, Male, 13, 8522233456
+7, Steve, Male, 28, 8501085009
+8, Smriti, Female, 55, 9246655498
