@@ -1,0 +1,200 @@
+
+  Agenda
+  ------
+
+   Prerequisite: Python
+
+   	-> Spark Basics, Architecture
+	-> Spark Core API (Low Level API)
+		-> RDDs - RDD Transformations & Actions
+	-> Spark SQL 
+	-> Spark MLlib (Machine Learning)
+	-> Introduction to Spark Streaming (Real-time analytics)
+
+  ----------------------------------------------------
+
+     Materials
+	-> PDF versions of the presentations
+	-> Daily class notes 
+	-> Code modules
+	-> GitHub: https://github.com/ykanakaraju/pyspark
+
+ ---------------------------------------------------
+
+  Big Data
+  --------   
+     -> Large and Complex Data
+     -> Data that is hard to store and process using traditional technologies that rely on single machines.
+
+	How ig Big Data characterized:
+	-> Volume
+	-> Velocity
+	-> Variety (unstructured & semi-structured data)
+	-> Veracity
+	-> Value
+	
+    -> A single machine become a limitation, the solution is to use the combined resources of many machines
+       This is called a cluster.
+
+
+    Computing Cluster	
+    -----------------
+	-> Is a unified entity consisting of many nodes (machines) whose cumulative resources 
+	   (Disk, RAM, CPU Cores) to store and process big data.
+
+    Hadoop
+    ------
+	-> Is a opensource framework for storing and processing bigdata using a computing 
+	   cluster made of commodity hardware. 
+
+	   -> HDFS (Hadoop Distributed File System) : Distributed Storage Framework. 
+	   	-> Data is distributed among many machines as blocks of 128MB each
+			-> 10 GB file is stored as 80 blocks spread on many nodes.
+		-> For each block, 3 replicas are created (by default)
+			-> Hence, to store a 10GB file on HDFS, we need 30GB disk space.
+
+	  -> MapReduce -> Distributed computing Framework
+		-> MR application contains two classes called Mapper & Reducer
+		-> Many instances of the mapper are launched parallelly in the containers allocated 
+		   on many nodes in the cluster.
+		-> The intermediate outputs produced by the mappers are written to disk (local disk)
+		-> This data is collected by the framework (shuffling) and then sent to the Reducer class
+		-> The Reducer aggregates all these results and produce final output.
+
+	  -> YARN -> Cluster Manager (or Resource Manager)
+		-> Accepts the jobs and allocates resource containers to those jobs across lot of nodes
+		-> The containers are allocated on the machine where the data blocks of the file are located.
+	
+   What is Spark?
+   --------------
+	-> Written in Scala language.
+	-> Is a unified in-memory distributed/cluster computing framework.
+	-> Spark supports multiple languages
+		-> Scala, Java, Python, R 
+
+	* in-memory distributed computing framework 
+		-> The intermediate outputs of distributed tasks can be persisted in-memory (RAM)
+		-> The subsequent tasks can operate on these in-memory persisted outputs. 
+		
+	
+   Spark Unified Framework
+   -----------------------
+	-> Spark provides a consistent set of APIs (libraries) running on the same execution engine 
+	   for processing different types of analytics workloads.	
+
+	  	Batch Analytics on unstructred data	 -> Spark Core API (RDD)
+		Batch Analytics on structured data       -> Spark SQL
+		Streaming Analytics (real time process)	 -> Spark Streaming, Structred Streaming
+		Predictive Analytics (Machine Learning)	 -> Spark MLlib
+		Graph Parallel Computations		 -> Spark GraphX
+
+
+   Spark Architecture & Building Blocks
+   ------------------------------------        
+	1. Cluster Manager
+
+		-> CM receives the job sumissions
+		-> Allocates executor containers to the applications
+		-> Supports Spark Standalone Scheduler, YARN, Mesos, Kubernetes.
+
+	2. Driver Process
+		-> Whenever an application is launched, the driver process is created first
+		-> master process which analysis the user-code and send tasks to be executed in the executors.
+		-> Driver process contains a "SparkContext" object.
+
+		Deploy-Modes
+                ------------
+		1. Client Mode (default)  -> The driver	runs on the client machine
+		2. Cluster Mode		  -> The driver runs in one of the nodes inside the cluster	
+
+
+	3. SparkContext
+		-> Represents an application and a connection to the cluster.
+		-> Link between the driver process and various tasks running on the cluster
+		-> Starting point og any SparkCore application
+		    NOTE: In case of Spark SQL, we use a "SparkSession" in place of SparkContext.
+
+	4. Executors
+		-> We have many executors allocated by Cluster manager and multiple processes
+		   run with in each executor
+		-> Driver sends tasks to be executed in the executors by analyzing the user-code
+		-> All tasks does the same function, but on different partitions. 
+		-> Executors report the status of the tasks to the driver.
+
+
+    Getting started with PySpark
+    ----------------------------
+
+     1. Installing Spark locally and work with PySpark shell
+
+	1.1 Download Spark from the URL: https://spark.apache.org/downloads.html
+	    and extract it to a suitable folder.
+
+	1.2 Setup the environment variables
+		SPARK_HOME  	-> spark installation location
+		HADOOP_HOME	-> spark installation location
+		PATH		-> Add the <Spark>\bin 
+	
+
+    2. Using some IDE such as Spyder or Jupiter Notebook (or PyCharm)
+	
+	2.1 Install Anaconda Navigator
+		https://docs.anaconda.com/anaconda/install/windows/
+
+	2.2 To setup PySpark with Spyder or Jupyter Notebook, follow the instructions in the
+	    document shared in the github.
+
+    3. Using Databricks Community Edition Account (***)
+
+	-> Signup to Databricks Community Edition Account
+		=> https://databricks.com/try-databricks
+		=> Read "QuickStart Tutorial"   
+		
+	
+	
+    RDD (Resilient Distributed Dataset)
+    -----------------------------------
+
+	-> Fundamental data abstraction of Spark Core API
+
+	-> RDD is a set of distributed in-memory partitions
+	    -> Partition is a collection of objects
+	    -> If you load a textfile into an RDD, you will have an RDD of Strings where each line
+	       of the textfile is one object.
+
+
+
+
+    Creating RDD
+    ------------
+
+	-> 3 ways
+
+	1. Create an RDD from some external file.
+		
+		rdd1 = sc.textFile( "E:\\Spark\\wordcount.txt" )
+
+	2. Create an RDD from programmatic data
+
+		rdd2 = sc.parallelize( range(1, 101) )
+
+	3. By applying transformations on existing RDDs, we can create new RDDs.
+
+		rdd2 = rdd1.map(lambda x: x.upper())
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
