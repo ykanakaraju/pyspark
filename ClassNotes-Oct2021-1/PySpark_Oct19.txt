@@ -1,0 +1,209 @@
+
+  Agenda
+  ------
+    -> Spark - Basics & Architecture
+    -> Spark Core API
+	-> RDD - Transformations & Actions
+        -> Shared Variables
+    -> Spark SQL
+	-> DataFrames
+    -> Machine Learning & Spark MLlib  
+    -> Introduction to Spark Streaming 
+  
+  ===================================================
+  
+   Materials
+   ---------
+      
+     => Daily Class Notes
+     => PDF versions of presentations.
+     => Lot of Code
+
+  ===================================================
+
+   Spark  -> Is unified in-memory distributed computing framework.
+	  -> Is written in Scala
+
+	  -> Spark supports multiple programming languages
+		-> Scala, Java, Python, R
+
+    Computing Cluster :  
+    ------------------
+
+       - Is a unified entity comprising of lot of machines (nodes) whose cumulative resources
+	 can be used to distribute the storage or to distribute processing.
+
+       -> Usually managed by a cluster manager which is reponsible for allocating resources to
+	  various jobs running on the clsuter.
+
+   In-memory distributed computing
+   --------------------------------
+
+       -> The results of the intermediate tasks can be stored in-memory and subsequent tasks
+	  can read these results from memory. 
+
+   Spark Unified Framework
+   ------------------------   
+    Spark unified framework provodes a set of consiste API to process different 
+    analytical workloads running on the same execution engine. 
+
+
+	Hadoop Ecosystem (except Spark)
+        --------------------------------	
+         Batch Analytics of Unstructured Data	 => MapReduce
+	 Batch Analytics of Structured Data	 => Hive, Impala, Drill
+	 Streaming Analytics (real time)	 => Kafka, Storm, Flink
+	 Predictive Analytics (machine learning) => Mahout
+	 Graph Parallel Computations             => Giraph
+
+        Spark Unified Framework
+        --------------------------------	
+         Batch Analytics of Unstructured Data	 => Spark Core API (RDD)
+	 Batch Analytics of Structured Data	 => Spark SQL (DataFrames)
+	 Streaming Analytics (real time)	 => Spark Streaming, Structured Streaming
+	 Predictive Analytics (machine learning) => Spark Mllib
+	 Graph Parallel Computations             => Spark GraphX
+	
+	
+   Spark Architecture
+   ------------------
+    
+    1. Cluster Manager (CM)	
+	-> Applications are submitted to the CM
+	-> CM schedules the job
+        -> Allocates resource containers (driver & executors) to the applications
+	
+    2. Driver Process
+	-> Master process
+	-> Manages the user-code
+	-> A sparkContext (or SparkSession) object is created
+	-> Analyses the user code and sends tasks to the executors
+
+	Deploy-modes
+	    
+            2.1 Client (default) -> The driver runs on the client machine
+	    2.2 Cluster		 -> Driver runs as on of the processes in the cluster	
+	
+    3. Executors
+	-> Executors execute the tasks sent by the driver
+	-> All tasks does the same process but on different partitions of the data	
+	-> Report the status of the task to the driver.
+
+    4. SparkContext
+	-> SparkContext represents an application 
+	-> Represents a connection to the cluster.
+
+
+   Getting Started with Spark
+   --------------------------
+   
+     1. Downloading and setting up Spark
+
+	   URL:  https://spark.apache.org/downloads.html		
+
+           -> Download thes aprk xxx.tgz file and extract it to a suitable folder
+           -> Setup environment variables
+		SPARK_HOME  : spark installation folder (ex: E:\spark-3.0.0-bin-hadoop2.7)
+	 	HADOOP_HOME : spark installation folder
+		-> Add <SPARK_HOME>\bin folder to the PATH environment variable.
+
+     2. Install an IDE and setup PySpark
+
+	 -> Refer to the installation document shared with you to setup PySpark with
+	    Spyder and Jupyter Notebooks.
+
+	 -> The document assumes that you have "Anaconda Navigator" installed. 
+
+     3. Databricks Community Edition Account (free account with 15 GB)
+
+	  -> URL: https://databricks.com/try-databricks 
+	  -> Read the "Explore the Quickstart Tutorial" 
+	
+       
+   Spark Core API
+   -------------- 
+     => Is the low level API     
+     => The fundamental data abstraction of Spark Core API is "RDD"
+
+
+   RDD (resilient distributed dataset)
+   -----------------------------------
+
+     -> Is a collection of in-memory distributed partitions
+	   -> These partitions are created by reading data from some source data 
+	      file from disk.	
+
+	   -> Each partition is a collection of objects
+
+    -> RDDs are immutable
+   	    -> the content of RDD can not be changed
+            -> We can apply transformations to create new RDDs.
+
+    -> RDDs are lazily evaluated
+
+	  
+
+
+   Creating RDDs
+   -------------
+	There are three ways:
+
+	1. RDDs can be created from external data files
+
+		rdd1 = sc.textFile( "E:\\Spark\\wordcount.txt", 5 )   
+                -> Creates RDD with 5 partitions
+
+		rdd1 =  sc.textFile( "E:\\Spark\\wordcount.txt" )
+
+		-> The default number of partitions is determined by "sc.defaultMinPartitions"
+		-> The default values of "sc.defaultMinPartitions" is 2 if you have atleast 2 cores.
+
+
+	2. RDDs can be created from programmatic data
+
+
+	3. By applying transformations on existing RDDs
+
+
+
+   What can we do with RDDs
+   ------------------------
+
+	We can do two things with an RDD
+
+
+	1. Transformations
+		-> Does not cause execution
+		-> Cause creation of lineage DAG (logical plan) only
+
+	2. Actions
+		-> Cause the execution of RDD and create output
+
+
+   RDD Lineage
+   -----------
+	
+     Lineage DAG represents a logical plan that tells how to create an RDD.
+     It tracks all the parent RDDs and transformations all the way from the very first RDD.
+	
+     rdd1 = sc.textFile( file, 4 )
+	==> Lineage:  rdd1 -> sc.textFile
+
+     rdd2 = rdd1.map(lambda x: x.upper())
+	==> Lineage:  rdd2 -> rdd1.map -> sc.textFile
+
+     rdd3 = rdd2.filter(lambda x: len(x) > 50)
+	==> Lineage:  rdd3 -> rdd2.filter -> rdd1.map -> sc.textFile
+
+     rdd4 = rdd3.flatMap(lambda x: x.split(" "))
+	==>  rdd4 -> rdd3.flatMap -> rdd2.filter -> rdd1.map -> sc.textFile
+
+ 
+     rdd4.collect()
+	
+	 rdd4 -> rdd3.flatMap -> rdd2.filter -> rdd1.map -> sc.textFile  
+	
+	 Tasks: sc.textFile (rdd1) -> map (rdd2) -> filter (rdd3) -> flatMap (rdd4) -> collect()
+	
+
+
