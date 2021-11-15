@@ -1,0 +1,225 @@
+
+  Agenda
+  ------	
+   -> Spark - Basics & Architecture
+   -> Spark Low Level API (Spark Core)
+	-> RDDs - Transformations & Actions
+	-> Shared Variables
+   -> Spark SQL (DataFrames API)
+   -> Machine Learning & Spark MLlib
+   -> Introduction to Spark Streaming
+
+  -----------------------------------
+  Materials
+   
+	-> PDF Presentations  
+	-> Code Modules
+        -> Class Notes
+   	-> Github: https://github.com/ykanakaraju/pyspark
+ ---------------------------------
+
+    Spark 
+    ------	
+	-> Spark is a unified in-memory distributed computing framework.
+
+	-> Written in Scala programming language.
+
+	-> Supports multiple languages (Spark is polyglot)
+	   -> Scala, Python, Java, R    
+
+    Cluster
+    -------
+	-> Is a unified entity containing a group of nodes whose cumulative resources 
+           can be used to store or process our  data.
+
+
+    Distributed Computing Framework
+    --------------------------------
+	-> A distributed computing framework runs several instances of the same task (tasks)
+	   across several containers allocated in different nodes and processes the data
+	   paralally. 
+
+	-> Wih this we can process any amount in ashort time, by allocating more and more 
+	   resources and more and more parallel tasks. 
+
+
+   Spark Unified Framework
+   -----------------------
+	=> Spark provides a consistent set of APIs based on the same execution engine
+	   to perform computations on different analytical workloads.
+
+	Hadoop Ecosystem
+        ----------------      
+	Batch Analytics of Unstructured data	-> MapReduce
+	Batch Analytics of Structured data	-> Hive, Drill, Impala
+	Streaming Analytics (real-time)		-> Kafka, Storm, Samza
+	Predictive Analytics (ML)		-> Mahout
+	Graph Parallel Computations		-> Giraph
+
+	Spark Framework
+        ----------------      
+	Batch Analytics of Unstructured data	-> Spark Core API (RDDs)
+	Batch Analytics of Structured data	-> Spark SQL 
+	Streaming Analytics (real-time)		-> Spark Streaming
+	Predictive Analytics (ML)		-> Spark MLlib
+	Graph Parallel Computations		-> Spark GraphX
+
+
+   Spark Architecture
+   ------------------
+
+     1. Cluster Manager (CM)
+	
+	-> Applications are submitted to cluster manager
+		-> Spark supports multiple CMs : Spark Standalone, YARN, Mesos, Kubernetes.
+
+	-> Cluster Manager schedules the task and lauches a driver process 
+	   (which sparkContext is created)
+
+	-> CM allocates executors to the application
+
+     2. Driver 
+	
+	-> Master process
+	-> Analyses the user-code
+	-> Maintains all the meta-data of the application. 
+	-> Sends tasks to the executors based on user-code
+
+	Deploy Mode:
+		- Client Mode (default): The driver process runs on the client machine
+		- Cluster Mode : The driver runs on one of the nodes in the clsuter. 
+
+     3. Executors
+	
+	-> Executes the tasks sent by the driver
+	-> All tasks does the same function, but on different partitions of data
+	-> reports the status of the tasks to the driver
+
+     4. SparkContext (or SparkSession)
+	
+	-> Starting point of execution
+	-> represents an application context
+	-> Acts as a link between the driver and various tasks running on the cluster.
+
+
+
+   Getting started with Spark
+   --------------------------
+
+    1. Installing Spark
+	
+	 URL: https://spark.apache.org/downloads.html
+
+	 Download Spark binaries and unzip in a suitable location.
+
+	 Setup environment variables:
+	
+		SPARK_HOME:  	E:\spark-3.0.0-bin-hadoop2.7
+		HADOOP_HOME:	E:\spark-3.0.0-bin-hadoop2.7
+
+		Add the following to the PATH env. variable:
+			%SPARK_HOME%\bin
+			%SPARK_HOME%\python
+			%SPARK_HOME%\python\lib\py4j-0.10.9-src.zip
+
+    		PYTHONPATH: %SPARK_HOME%/python;%SPARK_HOME%/python/lib/py4j-0.10.9-src.zip;%PYTHONPATH%
+
+         Open windows command terminal (or Anaconda prompt) and type "pyspark"
+
+
+   2. Installing an IDE
+
+	 Popular IDEs => Spyder, PyCharm
+	 Install "Anaconda Navigator" from https://www.anaconda.com/products/individual
+
+	 Follow the document shared with you to setup pyspark to work with Spyder (or Jupyter notebook)
+
+
+   3. Create a free Databricks community edition account
+
+	URL: https://databricks.com/try-databricks
+	
+	-> Signup to Databricks community edition
+	-> Login
+	-> Go thourgh the "Quickstart Tutorial"
+
+  
+   RDD  (Resilient distributed dataset)
+   -------------------------------------
+
+     -> Is the fundamental data abstraction of Spark. 
+
+     -> Is a collection of in-memory distributed partitions
+	   -> A partition is a collection of objects.
+
+     -> RDDs are immutable (you can not change the content of an RDD)
+
+     -> RDD has two things:		
+		1. Lineage DAG - logical plan that describes how to create the RDD
+		2. Data	       - The set of partitions.
+
+     -> RDDs are lazily evaluated
+		-> Only action commands cause execution of the RDDs.
+	
+   Creating RDDs
+   -------------
+
+	3 ways:
+
+	1. Creating RDD from some external data file
+
+		rdd1 = sc.textFile( "E:\\Spark\\wordcount.txt", 4 )
+
+		rddFile = sc.textFile( filePath )
+		-> The default number of partitions is given by "sc.defaultMinPartitions"
+
+	2. ???
+		
+		
+	3. ???
+
+
+   What can we do with RDDs
+   ------------------------
+
+	Only two things:
+
+	1. Transformations
+	    -> Operates on an RDD and returns an RDD
+	    -> Causes the lineage DAG to be created 
+	    -> Transformations does not cause actual execution.
+
+	2. Actions
+	    -> Returns some output
+	    -> Cause the execution of the RDDs
+
+   RDD Lineage
+   -----------
+
+	-> Is a logical plan maintained by the driver which contains all the dependencies (parent RDDs)
+           that caused the creation of this RDD all the way from the very first RDD.
+  
+	rddFile = sc.textFile( filePath, 4 )
+	  lineage DAG: rddFile -> sc.textFile
+
+	rdd2 = rddFile.map(lambda x: x.upper())
+	  lineage DAG: rdd2 -> rddFile -> sc.textFile
+	
+	rdd3 = rdd2.flatMap(lambda x: x.split(" "))
+	  lineage DAG: rdd3 -> rdd2 -> rddFile -> sc.textFile
+
+	rdd4 = rdd3.map(lambda x: len(x))
+	  lineage DAG: rdd4 -> rdd3 -> rdd2 -> rddFile -> sc.textFile
+
+        rdd4.collect()   => triggers execution
+
+	sc.textFile (rddFile) -> map (rdd2) -> flatMap (rdd3) -> map (rdd4) -> collect()
+   
+
+    $jupyter notebook
+    $jupyter notebook --allow-root
+
+
+
+
+    
