@@ -1,0 +1,201 @@
+
+  Agenda - PySpark
+  -----------------
+  -> Spark - Basics & Architecture
+  -> Spark Core API
+	-> RDD Transformations & Actions
+	-> Shared Variables
+  -> Spark SQL
+  -> Machine Learning & Spark MLlib
+  -> Introduction to Spark Streaming
+
+  Materials
+  ---------
+     -> PDF presentations
+     -> Code examples
+     -> Class notes
+    
+  Spark
+  -----
+
+    -> Is a unified in-memory distributed computing framework.	
+    -> Spark is written in 'Scala'
+
+    Cluster => A group of nodes whose cumulative resources can be used to distribute 
+               your storage and processing.
+
+    In-Memory Computing => The intermediate results of tasks can be persisted in RAM.
+
+  
+    Unified Framework
+    -----------------
+
+	=> Spark provides a consistent set of APIs for processing different analytical workloads
+	   using the same execution engine.
+
+	-> Batch processsing of unstructured data	: Spark Core API (RDDs)
+	-> Batch processsing of structured data		: Spark SQL
+        -> Stream processing				: Spark Streaming, Structured Streaming
+        -> Predictive analytics	(machine learning)	: Spark MLlib			
+        -> Graph parallel computation			: Spark GraphX
+ 
+
+    -> Spark is a polyglot
+	-> You use Scala, Java, Python and R to write Spark application. 
+
+    -> Spark applications can be submitted to muliple cluster manager.
+	-> local, Spark Standalone, YARN, Mesos, Kubernetes. 
+
+
+   Spark Layered Architecture
+   ---------------------------   
+    Programming Lang. :  Scala, Python, Java, R
+    Spark High level  :  Spark SQL, Spark MLlib, Spark Streaming, Spark GraphX
+    Spark Low Level   :  Spark Core API (RDDs)
+    Cluster Managers  :  Spark Standalone, YARN, Mesos, Kubernetes
+    Storage Layer     :  Linux, HDFS, Cloud, Kafka (Messageing systems), NoSQL, RDBMS
+
+
+    Spark Architecture
+    ------------------
+
+     1. Cluster Manager (CM)
+	
+	-> Applications are submitted to CMs
+	-> Schedules the application and lauches the application
+	-> Allocates resources (executors) to the application.
+
+     2. Driver 
+	-> Master process
+	-> manages the user code
+	-> analyses the user code and sends tasks to the cluster. 
+
+	Deploy modes
+		1. client   -> default. Driver runs on the client machine.
+		2. cluster  -> Driver runs on one of the nodes on the cluster.
+     
+     3. Executors
+	-> Execute the tasks sent by the driver
+	-> reports the status back to the driver
+	-> All tasks does the same function but on different partitions of data. 
+
+     4. SparkContext		
+	 -> Starting point of exection that creates a driver process
+	 -> Represents an application context
+	 -> Is a link between the driver process and the tasks running in the cluster
+	 -> Runs inside a driver process.
+
+
+    Getting started with Spark
+    ---------------------------
+	1. In you vLab:
+ 
+             -> Click on the CentOS 7 icon on the windows desktop. 
+	     -> Login with your userid and password (Readme.txt)
+	     -> Open a terminal
+	    
+	     	1. PySpark shell:   (type 'pyspark' at your prompt)  
+			$ pyspark
+
+		2. Working Jupyter Notebook
+			$jupyter notebook   
+			$jupyter notebook --allow-root	
+
+			-> This will launch Jupyter notebook. 
+			-> There is a "PySparkTest.ipynb". Open it to see how to get started. 
+
+	2. Databricks Comminity Edition
+		=> URL: https://databricks.com/try-databricks
+		-> Signup using the above URL
+		-> Complete the signup process by following the link that is sent to your email. 
+  		-> Login to Databricks Cloud:
+			Link: https://community.cloud.databricks.com/login.html
+		-> Go thorugh "Guide: Quickstart tutorial" link & "Data import" link
+
+       3. Setting up PySpark with Spyder (or Jupyter Notebook) on your local machine.
+
+		-> Install "Anaconda Navigator" first
+		-> Try "pip install pyspark" 
+		        If this does not work: 
+			-> Follow the instructions document" shared in the Github.
+
+
+    RDD (Resilient Distributed Dataset)
+    -----------------------------------
+
+     => RDD is the fundamental data abstraction of Spark Core API
+
+     => Is a collection of distributed in-memory partitions.
+	  -> Each partition is a collection of objects.
+
+     -> RDDs are immutable
+
+     -> RDDs are lazily evaluated.
+	-> Transformations does not cause execution
+	-> Action commands trigger execution
+
+     
+    How to Create RDDs ?
+    -------------------
+	
+	Three ways:
+
+	1. Create an RDD from external data files
+
+		rdd1 = sc.textFile( "E:\\Spark\\wordcount.txt", 4 )
+
+	2. Create RDDs from programmatics data (python collections)
+
+		rdd10 = sc.parallelize( range(1, 101), 3 )
+
+	3. Apply applying transformations on existing RDDs
+
+		rdd2 = rddFile.map(lambda x: x.upper())
+		rdd3 = rdd2.filter(lambda x: len(x) > 51)
+	
+
+    What can you do with an RDD ?
+    -----------------------------
+
+	Only two things:
+
+	1. Transformations
+		-> Cause creation of Lineage DAGs (logical plan) of RDDs
+		-> Returns an RDD
+		-> Does not cause execution.
+
+	2. Actions
+		-> Produces some output
+		-> Cause the logical plan to be converted into a plan plan and set of tasks
+		   to launched on the cluster.
+
+
+    RDD Lineage DAG (Logical execution plan)
+    -----------------------------------------
+	-> Is a set of instruction maintained by driver on how to create the RDD.
+
+	-> Is a logical plan, containing all the dependencies all the way from the very first RDD
+           that caused creation of this RDD.
+
+	rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+		Lineage of rddFile: rddFile  -> sc.textFile
+
+	rdd2 = rddFile.map(lambda x: x.upper())
+		Lineage of rdd2:  rdd2 -> rddFile.map  -> sc.textFile
+
+	rdd3 = rdd2.filter(lambda x: len(x) > 51)
+		Lineage of rdd3:  rdd3  -> rdd2.filter -> rddFile.map  -> sc.textFile
+
+	rdd4 = rdd3.flatMap(lambda x: x.split(" "))
+		Lineage of rdd4:  rdd4 -> rdd3.flatMap -> rdd2.filter -> rddFile.map -> sc.textFile
+    
+	rdd4.collect() => This will cause execution..
+		Transformations: sc.textFile -> map -> filter -> flatMap -> rdd4
+
+     
+   RDD Transformations
+   -------------------
+	-> to be discussed ...
+
+
+
