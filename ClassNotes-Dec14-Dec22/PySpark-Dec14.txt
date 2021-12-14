@@ -1,0 +1,196 @@
+
+  Agenda
+  --------
+   -> Spark - basics and architecture
+   -> Spark Core API
+	-> RDD Transformations & Actions
+	-> Shared Variables
+   -> Spark SQL
+   -> Machine Learning & Spark MLlib
+   -> Introduction Spark Streaming
+
+
+  Materials
+  ---------
+   -> PDF presentations
+   -> Code Modules
+   -> Class Notes
+   
+  
+  Spark
+  ---------
+     => Written in Scala programming language
+
+     => Is a unified in-memory distributed computing framework.
+
+     => Spark is polyglot
+	 -> Scala, Java, Python, R	
+
+     => Spark supports multiple cluster manager
+	-> local, Spark Standalone, YARN, Mesos, Kubernetes.	
+
+  Cluster
+  -------
+	=> Is a group of nodes whose cumulative resources can be used to ditribute the storage of very large
+	   datasets and also to distribute processing on very large amount of data. 
+ 
+   In-memory Computing Framework
+   -----------------------------
+	Spark allows to save the intermediate results of computations in memory so that the
+        subsequent tasks can directly read this persisted data from memory and act upon it.
+     
+   Unified Framework
+   -----------------
+	=> Spark provides a consistent set of APIs for different analytical workloads based on the
+	   same execution engine.	
+
+          -> Batch Processsing of unstructured data	=> Spark Core API
+	  -> Batch Processsing of structured data	=> Spark SQL
+          -> Stream Processing 				=> Spark Streaming, Structured Streaming
+          -> Predictive Analytics (ML)			=> Spark MLlib
+          -> Graph Parallel Computations    		=> Spark GraphX
+
+
+   Spark Architecture
+   ------------------
+
+	1. Cluster Manager (CM)
+		-> Applications are submitted to CM
+		-> CM allocates resources (containers for executors and driver) for the application
+		
+	2. Driver
+		-> Master Process that manages the execution
+		-> Created a SparkContext object
+		-> Analyses the user code and sends tasks to the executors
+
+		Deploy Modes:
+			-> client : default, Driver run in the client machine
+			-> cluster : driver runs on one of the nodes in the cluster.
+
+	3. Executors
+		-> Runs the tasks that are assigned by the driver and status is reported back to the driver.
+		-> All tasks does the same thing, but on different partitions of data
+
+	4. SparkContext
+		-> Starting point of execution and is created in a driver process
+		-> Application context
+		-> Link between the driver process and various tasks running on the cluster.
+
+
+    Getting started with Spark
+    --------------------------
+		
+	1. In your vLab :
+		-> Launch the vLab by following the instructions in the email	
+		-> Click on "CentOS 7" icon to launch the VM using userid & password.
+
+		Launching a  PySpark Shell
+		-> Lauch a Terminal
+		-> Type 'pyspark' at the prompt
+
+		Working with Jupyter Notebooks
+                -> Open a Terminal
+		-> Type the following:
+			$jupyter notebook
+			$jupyter notebook --allow-root
+
+		-> There is a sample notebook available "PySparkTest.ipynb"
+
+	2. Install Spyder/Jupyter Notebook on your local machine
+
+		-> Install the "Anaconda Navigator"
+			https://docs.anaconda.com/anaconda/navigator/index.html
+			https://docs.anaconda.com/anaconda/install/windows/
+
+		-> Setting up PySpark wityh Spyder or Jupyter Notebook
+			=> Try pip install
+			   => Open Anaconda Prompt (terminal Window)
+			   => Type  C:> pip install pyspark
+
+			=> if pip install is not working:
+			   -> Try instruction given in the document to manually setup.
+			      https://github.com/ykanakaraju/pyspark/blob/master/Pyspark-JupyterNotebooks-Windows-Setup.pdf
+
+	3. Signup for Databrick Community Edition (Free)
+		=> URL: https://databricks.com/try-databricks
+		
+		=> Login with your credentials
+		=> Read "Quickstart Tutorial" and "data import"
+
+
+   RDD (Resilient Distributed Dataset)
+   -----------------------------------
+
+      => Fundamental data abstraction of Spark
+     
+      => Collection of distributed in-memory partitions. 
+	   -> Each partition is a collection of objects.
+       
+      => RDDs are immutable
+
+      => RDDs are lazily evaluated.
+
+
+   What can you do on an RDD ?
+   ---------------------------	
+	Two things:
+
+	1. Transformations
+		-> Returns an RDD. No output is generated
+		-> Causes Lineage DAG of the RDD to be generated at the driver.
+		-> Execution is not triggered.
+
+	2. Actions
+		-> Triggers execution
+		-> Converts the logical plan (lineage) into a physical execution plan
+		-> Launches a job on the cluster.	
+	
+   How to create RDDs ?
+   --------------------
+	
+	3 ways:
+
+	1. Creating an RDD from some external data file such as a textfile
+
+		rddFile = sc.textFile("E:\\Spark\\wordcount.txt")
+
+	2. Createing an RDD from programmatic data such as a collection
+
+		rdd5 = sc.parallelize( range(1, 100), 3 )
+
+	3.  By applying transformations on existing RDDs
+
+		rdd2 = rddFile.map(lambda x: x.upper())
+
+   RDD Lineage
+   ------------	
+
+    An RDD lineage is created at the driver when an RDD object is created
+    
+    An RDD lineage is a logical plan (set of instructions) on how to create this RDD and tracks
+    the hierarchy of the dependencies all the way from the very first RDD. 		
+
+
+     -> rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+	Lineage DAG: (4) rddFile -> sc.textFile
+		
+     -> rdd2 = rddFile.map(lambda x: x.upper())
+  	Lineage DAG: (4) rdd2 -> rddFile.map -> sc.textFile
+
+     -> rdd3 = rdd2.flatMap(lambda x: x.split(" "))
+	Lineage DAG: (4) rdd3 -> rdd2.flatMap -> rddFile.map -> sc.textFile 
+	
+     -> rdd4 = rdd3.filter(lambda x: len(x) > 1)
+	Lineage DAG: (4) rdd4 -> rdd3.filter -> rdd2.flatMap -> rddFile.map -> sc.textFile
+
+	sc.textFile -> map -> flatMap -> filter -> rdd4 ==> collected to the driver
+
+
+  RDD Transformations
+  -------------------
+
+      -> to be discussed ...
+
+
+
+
