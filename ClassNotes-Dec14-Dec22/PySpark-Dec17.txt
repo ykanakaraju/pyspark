@@ -454,7 +454,18 @@
         		.map(lambda x: (x, 1)) \
         		.reduceByKey(lambda x, y: x + y)
 
-   20. aggregateByKey		
+   20. aggregateByKey	Is used to aggregate all the values of each unique key to a type
+				different that the values of (k,v) pairs. 
+
+		Three parameters:
+
+		1. zero-value : Is the initial value of the type of final output.
+
+		2. sequence-function: Merges all the values of each unique key with the zero-value
+				      This is applied to every partition
+
+		3. combine-function: Reduces all the different aggregated values of each unique-key
+				     across partitions.  	
 
 	student_rdd = sc.parallelize([
   		("Aditya", "Maths", 83), ("Aditya", "Physics", 74), ("Aditya", "Chemistry", 91), ("Aditya", "English", 82), 
@@ -522,7 +533,22 @@
 
 		rdd1.reduce(lambda x, y : x - y)
 
-   5. aggregate	
+   5. aggregate	        -> Merges all the values of an RDD with a zero-value to produce one final output of
+			   type which is different than the type of the elements of the RDD. 
+			-> The final output is of the type of zero-value. 
+
+		Three Parameters:
+
+		1. zero-value  : initial value of the type of the final output
+
+		2. Sequence-function : is a function that is used to merge all the values
+		   of each parititon with the zero-value. This function is applied for each
+		   partition (narrow). 
+
+               3. Combine-function : Is a reduce function that reduces all the values per 
+	          partition produced by sequence function into one final values of the type
+                  of the zero-value.
+
 
    6. first	=> rdd1.first()
 
