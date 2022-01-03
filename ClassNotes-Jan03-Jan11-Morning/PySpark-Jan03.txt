@@ -1,0 +1,262 @@
+
+  Agenda
+  ------
+  
+   Prerequite: Python Programming Language
+
+   Spark - Basics & Architecture
+   Spark Core API (Low-level API)	
+	-> RDD Transformations & Actions
+   Spark SQL
+	-> DataFrame Operations
+   Machine Learning & Spark MLlib
+   Introduction to Spark Streaming
+  
+   Materials
+   ---------
+	-> PDF Presentations
+	-> Code Modules
+	-> Class Notes
+	-> GitHub: https://github.com/ykanakaraju/pyspark
+   
+   Spark
+   -----
+     -> Spark is written in 'Scala' programming language. 
+
+     -> Spark is a unified in-memory distributed computing framework for big data analytics.	
+
+     -> Spark is a polyglot
+	-> Spark apps can be written in Scala, Java, Python, R  
+
+     -> Spark programs can run on multiple cluster managers 
+	-> local, spark standalone scheduler, YARN, Mesos, Kubernetes
+
+
+   Cluster
+   -------
+	-> Is a unified entity consisting of a group of nodes who cumulative resources can be used
+	   to store and process/compute data.  
+		
+	-> Distributed Storage : Splits the data that is to be stored on the disk into small chunks
+	   called blocks and these blocks are distributed across lot of nodes in the cluster. 
+
+       -> Distributed Computing: Distributing the computations across many machine and running your tasks
+	  by using the resources (RAM & CPU cores) of many machine parallelly.
+
+       -> In-memory computing -> in-memory distributing computing refers to the ability of the framework to
+	  store the intermediate results in the RAM and subsequent tasks can read these results from memory 
+	  and continue the processing. 
+
+   Spark Unified Framework
+   -----------------------
+     Spark provides a consist set of API for processing different analytical workloads using the
+     same execution engine and common data abstractions. 
+
+	-> Batch Analytics of Unstructured data 	: Spark Core API (RDD API) 
+	-> Batch Analytics of Structured data 		: Spark SQL
+	-> Streaming Analytics (real-time)		: Spark Streaming, Structured Streaming
+	-> Predictive Analytics (machine learning)	: Spark MLlib
+	-> Graph parallel computations			: Spark GraphX
+
+     
+   Getting started with Spark 
+   --------------------------
+  
+      1. Using your vLab
+	
+	 -> Login into your Lab (Windows Server)
+	 -> Click on 'CentOS 7' icon and enter username and password (given in readme.txt)
+	 -> Now youur inside your lab
+
+	 -> Open a terminal and connect to pyspark shell
+		-> type "pyspark"
+
+	 -> Open a terminal and connect to "Jupyter Notebook"
+		-> jupyter notebook    (if this is not working, try the other command)
+		-> jupyter notebook --allow-root
+
+
+      2. Setting up your own PySpark environment 
+	   
+	   -> Install "Anaconda Navigator"   (URL: https://www.anaconda.com/products/individual)
+	   -> You have two tools -> Jupyter Notebook & Spyder
+	   -> To setup PySpark on Jupyter Notebook & Spyder follow the steps in the document shared in github.
+	 
+
+      3. Signup to Databricks community edition
+		
+             URL: https://databricks.com/try-databricks
+
+		-> Signup using the above url
+		-> Login with your userid and password.
+		-> Go through "Guide: Quickstart tutorial"
+
+     
+   Spark Architecture
+   ------------------
+
+    1. Cluster Manager
+
+    2. Driver Process
+
+    3. SparkContext
+	
+	-> Starting point of execution
+	-> Represents an application (is an application context)
+	-> Provides a link between driver and various processes running on the executors.
+
+    4. Executors
+
+
+   RDD (Resilient Distributed Dataset)
+   ----------------------------------- 
+
+	-> Is the fundamental data abstraction of spark
+
+	-> Is a collection in distributed in-memory partitions
+		-> Each partition is a collection of objects (of some type)
+
+	-> RDDs are immutable
+
+	-> RDD has two components
+		-> Meta Data : RDD Lineage DAG
+		-> Data      : A set of partitions
+
+
+	
+    How to create RDDs ?
+    --------------------
+	
+     Three ways:
+
+	1. Create an RDD from some external data file
+
+		rdd1 = sc.textFile( <filePath>, [numPartitions] )
+		
+		rdd1 = sc.textFile("E:\\Spark\\wordcount.txt")
+		-> default number of partitions is given by the value of sc.defaultMinPartitions
+
+		rdd1 = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+
+
+	2. Create an RDD from programmatic data
+
+
+	3. By applying transformations on existing RDDs.
+
+
+
+   
+    What can you do on an RDD ?
+    ---------------------------
+
+	Two things:
+
+	1. Transformations
+		-> Produces an RDD
+
+
+	2. Actions
+
+
+ 
+    RDD Lineage DAG
+    ---------------
+	
+    Lineage DAG is created when a transformation command is executed. 
+    Lineage DAG of an RDD is a logical plan that tracks all the dependencies that causes the creation of
+    this RDD all the way from the very first RDD.
+
+
+	rdd1 = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+	Lineage DAG of rdd1 : (4) rdd1 -> sc.textFile
+
+	rdd2 = rdd1.map(lambda x: x.upper())
+	Lineage DAG of rdd2 : (4) rdd2 -> rdd1.map -> sc.textFile
+
+	rdd3 = rdd2.flatMap(lambda x: x.split(" "))
+	Lineage DAG of rdd3 : (4) rdd3 -> rdd2.flatMap -> rdd1.map -> sc.textFile
+
+	rdd4 = rdd3.filter(lambda x: len(x) > 3)
+	Lineage DAG of rdd3 : (4) rdd4 -> rdd3.filter -> rdd2.flatMap -> rdd1.map -> sc.textFile
+
+
+
+	
+	
+
+
+
+
+   
+   
+  
+
+
+
+
+
+
+
+
+
+
+
+
+P-0  (8 objects)
+	
+hadoop spark scala flatmap map groupby spark spark,
+hadoop scala flume oozie sqoop hive hive spark spark,
+mapreduce hadoop hive hadoop hdfs flatmap rdd scala,
+spark scala transformations actions rdd rdd rdd rdd,
+spark scala rdd transformations actions rdd rdd rdd,
+hadoop spark scala flatmap map groupby spark spark,
+hadoop scala flume oozie sqoop hive hive spark spark,
+mapreduce hadoop hive hadoop hdfs flatmap rdd scala
+
+
+P-1 (7 objects)
+
+spark scala transformations actions rdd rdd rdd rdd,
+spark scala rdd transformations actions rdd rdd rdd,
+hadoop spark scala flatmap map groupby spark spark,
+hadoop scala flume oozie sqoop hive hive spark spark,
+mapreduce hadoop hive hadoop hdfs flatmap rdd scala,
+spark scala transformations actions rdd rdd rdd rdd,
+hadoop spark scala flatmap map groupby spark spark
+
+
+P-2 (7 objects)
+
+hadoop scala flume oozie sqoop hive hive spark spark,
+mapreduce hadoop hive hadoop hdfs flatmap rdd scala,
+spark scala transformations actions rdd rdd rdd rdd,
+spark scala rdd transformations actions rdd rdd rdd,
+hadoop spark scala flatmap map groupby spark spark,
+hadoop scala flume oozie sqoop hive hive spark spark,
+mapreduce hadoop hive hadoop hdfs flatmap rdd scala
+
+
+P-2 (7 objects)
+
+spark scala transformations actions rdd rdd rdd rdd,
+spark scala rdd transformations actions rdd rdd rdd,
+hadoop spark scala flatmap map groupby spark spark,
+hadoop scala flume oozie sqoop hive hive spark spark,
+mapreduce hadoop hive hadoop hdfs flatmap rdd scala,
+spark scala transformations actions rdd hadoop hive,
+asd sadas das das das das das das d asd asd asd asd
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+

@@ -1,0 +1,198 @@
+
+  Agenda
+  -------
+
+   Pre-requisite: Python
+
+   Spark - Basics & Architecture
+   Spark Core API
+	-> RDD Transformations & Actions
+	-> Shared variables
+   Spark SQL
+	-> DataFrame Operation
+   Spark MLlib & Machine Learning
+   Introduction to Spark Streaming 	
+
+
+  Materials
+  ---------
+     -> PDF Presentations
+     -> Code Modules
+     -> Class Notes
+     -> GitHub: https://github.com/ykanakaraju/pyspark	
+
+
+  Spark
+  -----
+    -> Spark is written in 'Scala' programming language
+    -> Spark is a unified in-memory distributed computing framework for big data analytics.
+
+    -> Spark is a polyglot
+	-> Spark programs can be written in Scala, Java, Python and R
+
+    -> Spark programs can be submitted to multiple cluster managers
+	 -> Spark Standalone Scheduler, YARN, Mesos, Kubernetes.   
+
+  Cluster
+  -------
+    -> Is a unified entity consisting of many nodes whose cumulative resources can be used to
+       distributed your storage and processing.
+
+   -> in-memory distributed computing : The intermediate results can be persisted in RAM and sebsequent tasks
+      can further process these in-memory results. 
+
+   Spark Unified Framework
+   -----------------------
+      Spark provides a consistent set of APIs for processing various analytics workloads based
+      on the same execution engine.
+
+	-> Batch Analytics of unstructured data	: Spark Core
+	-> Batch Analytics of structured data	: Spark SQL
+	-> Streaming Analytics			: Spark Streaming, Structured Streaming
+	-> Predictive Analytics (ML)		: Spark MLlib
+	-> Graph Parallel Computations		: Spark GraphX
+
+
+   Spark Architecture
+   ------------------
+
+     1. Cluster Manager
+
+     2. Driver
+
+     3. SparkContext
+
+     4. Executor
+
+
+    Getting started with Spark
+    --------------------------
+
+    1. Working in your vLab
+
+	-> Connect to Windows server
+	-> On the desktop, click on CentOS7 and enter your username and password
+		(refer to README.txt file on the desktop for username and password)
+	-> This is your lab
+
+	-> Open a terminal and connect to pyspark  (type 'pyspark' at the prompt)
+		-> pyspark
+
+      	-> Open a terminal and connect to Jupyter Notebook
+		-> jupyter notebook --allow-root
+
+    2. Setting up PySpark environment on your local machine.
+	
+	 -> Download and install 'Anaconda Navigator'
+		-> URL: https://www.anaconda.com/products/individual
+
+	 -> You can try pip install
+		-> Open Anaconda Prompt
+		-> Type "pip install pyspark"
+       
+         -> If pip install is not work, then try setting up pyspark as per the instructions
+	    given in the shared document. 
+
+		-> https://github.com/ykanakaraju/pyspark/blob/master/Pyspark-JupyterNotebooks-Windows-Setup.pdf
+
+    3. Signup to Databricks Comminity Edition account.
+	
+	URL: https://databricks.com/try-databricks
+	
+	-> Signup with a valid email address
+	-> Create an account by following the steps mentioned in the email. 
+	-> Login to Databricks using userid and password. 
+	-> Go though "Quickstart Tutorial"
+		
+     	
+		
+   RDD (Resilient distributed dataset)
+   -----------------------------------
+	
+      -> Fundamental data abstraction of Spark
+ 
+      -> Is a collection of distributed in-memory partitions. 
+	  -> A partition is a collection of objects of some type.
+	
+      -> RDDs are immutable
+
+      -> RDDs have two components:
+		-> Meta Data : Lineage DAG (logical plan) maintained by the driver
+		-> Data	: in-memory partitions
+
+       -> RDDs are lazilty evaluated.
+
+
+   How to create RDDs ?
+   --------------------
+   Three ways:
+
+	1. Creating RDDs from external data files
+
+		rdd1 = sc.textFile("E:\\Spark\\wordcount.txt")
+		-> The default numPartitions is given by the value of sc.defaultMinPartitions property.
+
+		rdd1 = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+
+	2. Creating RDDs from programmatic data
+	
+		rdd10 = sc.parallelize( [1,2,3,5,3,4,6,7,8,9,0,3,4,5,7,6,8,9,0,7,8] )
+		-> The default numPartitions is given by the value of sc.defaultParallelism property
+		   (whose value is equal to the number CPU cores allocated to the application)
+
+		rdd10 = sc.parallelize( [1,2,3,5,3,4,6,7,8,9,0,3,4,5,7,6,8,9,0,7,8], 3 )
+
+
+	3. By applying tranformations on existing RDDs
+
+		rdd2 = rdd1.flatMap(lambda x: x.split(" "))
+
+
+   What can you do with RDDs ?
+   ---------------------------	
+	Two things
+
+	1. Transformations
+		-> Only rdds are 'created'
+		-> That means, a logical plan on how to create the RDD partitions (called Lineage DAG)
+		   is created and maintained by driver.
+		-> Actual executions of the tasks is not triggered.
+
+	2. Actions
+		-> Triggers execution
+		-> Converts the logical plan to physical plan and the driver sends the required tasks
+		   to the executors to compute the partitions of the RDD.
+
+
+   RDD Lineage DAGs
+   -----------------
+
+    RDD Lineage DAG refers to a logical plan maintained by driver which contains all the dependencies that
+    caused the creation of this RDD all the way from the very first RDD.
+
+	rdd1 = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+	Lineage DAG of rdd1 =>  (4) rdd1 -> sc.textFile
+
+	rdd2 = rdd1.flatMap(lambda x: x.split(" "))
+	Lineage DAG of rdd2 =>  (4) rdd2 -> rdd1.flatMap -> sc.textFile
+
+	rdd3 = rdd2.map(lambda x: x.upper())
+	Lineage DAG of rdd3 =>  (4) rdd3 -> rdd2.map -> rdd1.flatMap -> sc.textFile
+
+	rdd4 = rdd3.filter(lambda x: len(x) > 3)
+	Lineage DAG of rdd4 =>  (4) rdd4 -> rdd3.filter -> rdd2.map -> rdd1.flatMap -> sc.textFile
+
+
+ 
+   RDD Transformations
+   -------------------
+   
+   
+		
+
+
+
+
+
+ 
+
