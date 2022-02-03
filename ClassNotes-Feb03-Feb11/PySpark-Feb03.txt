@@ -1,0 +1,221 @@
+
+   Agenda (PySpark)
+   -----------------
+   -> Spark - Basics & Architecture
+   -> Spark Core API
+	-> RDD Transfomations & Actions
+	-> Shared variables
+   -> Spark SQL (DataFrames)
+   -> Spark MLlib & Machine Learning
+   -> Introduction Spark Streaming
+
+   Materials
+   ---------
+	-> PDF Presentations
+	-> Code Modules
+	-> Class Notes
+	-> GitHub: https://github.com/ykanakaraju/pyspark
+
+     
+   Spark
+   ------
+  	
+	-> Spark is a unified in-memory distributed computing framework.
+
+    	-> Spark is written in Scala.
+
+	-> Spark is a polyglot
+	   -> Supports Scala, Java, Python and R
+
+	Cluster : Is a unified entity containing many nodes whose combined resources can be used to
+	distribute you storage as well as processing. 
+
+	In-memory distributed computed : The intermediate results of the compuattions can be persisted
+	in-memory and subsequent tasks can directly operate these persisted data. 
+
+
+       Spark Unified Framework
+       -----------------------
+
+	Spark provides a consistent set of APIs for processing different types of analytical workloads
+	using the same execution engine.
+
+	Batch Analytics of Unstructured Data	=> Spark Core API (Low Level API)
+	Batch Analytics of Structured Data	=> Spark SQL
+	Streaming Analytics			=> Spark Streaming, Structured Streaming
+	Predictive Analytics (ML)		=> Spark MLlib
+	Graph Parallel Computations		=> Spark GraphX
+	
+	
+    Spark Architecture
+    ------------------
+
+     	1. Cluster Manager
+		-> Jobs are submitted to CM
+		-> Spark programs can be submitted to Spark Standalone, YARN, Mesos, Kubernetes
+		-> CM will allocate executors to the application. 
+
+	2. Driver
+		-> Master Process
+		-> Contains the SparkContext
+		-> Maintain all the metadata of the user program and of RDD
+		-> Send tasks to the executors
+
+		Deploy Modes:
+		 client  -> default, the driver process runs on the client machine.
+		 cluster -> driver runs in one of the nodes in the cluster
+
+	3. Executors
+		-> Executes the tasks sent by the driver
+		-> All tasks do the same processing, but on different partitions of the data
+		-> They report the status of the tasks to the driver.
+
+	4. SparkContext
+		-> Starting point of execution 
+		-> Created inside a driver
+		-> Represents an application
+		-> Link between the driver and several tasks running in the executors
+
+
+   Getting starting with PySpark   
+   ----------------------------
+
+    1. Using your vLab (toolwire lab)		
+	  -> Connect to the lab as per the instructions given in the email. (Clicking on BigData Enbl icon)
+	  -> You are connected to Windows Server. 
+	  -> Click on the "CentOS 7" icon and login using username and password.
+	    (Refer to README.txt file on the desktop for username and password)
+	  
+	  1. Launch PySpark Shell
+		
+		-> Open a Terminal
+		-> Type "pyspark"
+		-> This will launch the PySpark shell.
+		-> Connect to the WebUI
+			-> Open FireFox Browser  (Application -> FireFox Menu at top-left corner)
+			-> Type "localhost:4040" in the address bar
+
+	 2. Connect to Jupyter Notebook.
+		-> Open a Terminal
+		-> Type "jupyter notebook --allow-root"
+		-> This will lauch the Jupyter Notebook web interface. 
+
+    2. Installing and Setting up PySpark on your local machine.
+
+	-> Make sure you download and install "Anaconda navigator"
+		URL: https://www.anaconda.com/products/individual
+
+	-> You can use pip install to setup pyspark.
+
+	-> You can also setup pyspark to work with Jupyter Notebook & Spyder using the instruction given
+	   in the shared document.
+		NOTE: Make sure the python & pyspark versions are compatible (Python 3.7)
+
+    3. Signup to Databrick Community Edition
+
+	    URL: https://databricks.com/try-databricks	
+	    Spend some time exploring the "The Quickstart Tutorial"  
+
+
+   RDD (Resilient Distributed Dataset)
+   -----------------------------------
+	
+    => Is the fundamental data adstraction of Spark
+
+    => RDD is a collection distributed in-memory partitions
+	-> A 'partition' is a collection of objects.
+
+    => RDDs are immutable
+
+    => RDDs are resilient (fault-tolerant)
+
+    => RDDs are lazily evaluated
+	-> Transformations does not cause execution.
+	-> Only action commands cause execution.
+
+    => RDD has two components
+	-> Meta Data : RDD Lineage DAG
+	-> Data      : A set of partitions
+
+
+
+   How to create RDDs ?
+   --------------------
+	
+	3 Ways:
+
+	1. From external files
+
+		rdd1 = sc.textFile( <filePath>, [ numPartitions ] )
+		rdd1 = sc.textFile( "E:\\Spark\\wordcount.txt", 4 )
+
+		=> default number of partitions: sc.defaultMinPartitions
+
+	2. From programmatic data
+
+		rdd1 = sc.parallelize( range(1, 101), 3 )
+		rdd1 = sc.parallelize( [2,3,1,4,3,5,6,7,8,9,8,7,6,4,5,6,3,6,5,7,8,9], 3 )
+
+		=> default number of partitions: sc.defaultParallelism
+
+	3. By applying transformations on existing RDDs. 
+
+		rdd2 = rddFile.map(lambda x: x.upper())
+
+
+
+   What can you do with an RDD ?
+   -----------------------------
+
+      Two things:
+
+	1. Transformations
+
+	2. Actions
+
+
+   RDD Lineage DAG
+   ----------------
+  
+    Lineage DAG is a logical plan on how to create the partitions of the RDD when asked for.
+    Lineage DAG contains a graph of all dependencies on other RDDs all the way from the very first RDD
+    Lineage DAGs are created when you perform transformations
+    Loagical Plan is converted to physical plan and executes the tasks when you run an 'action' command. 
+
+
+	rddFile = sc.textFile( file, 4 )
+	Lineage DAG : (4) rddFile -> sc.textFile
+		
+	rdd2 = rddFile.map(lambda x: x.upper())
+	Lineage DAG : (4) rdd2 -> rddFile.map -> sc.textFile
+
+	rdd3 = rdd2.flatMap(lambda x: x.split(" "))
+	Lineage DAG : (4) rdd3 -> rdd2.flatMap -> rddFile.map -> sc.textFile
+
+	rdd4 = rdd3.filter(lambda x: len(x) > 3)
+	Lineage DAG : (4) rdd4 -> rdd3.filter -> rdd2.flatMap -> rddFile.map -> sc.textFile
+
+        rdd4.collect()   => returns a list object
+       	 
+   
+   RDD Transformations
+   -------------------
+
+    1. map		P: U -> V
+			Object to Object Transformation
+			Transforms each object of the input RDD to the corresponding object of the
+			output RD by applying the function
+			Input RDD: N objects, Output RDD: N objects. 
+
+
+
+
+
+
+
+
+
+
+
+
+
