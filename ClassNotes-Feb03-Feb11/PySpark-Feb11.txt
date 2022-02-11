@@ -1,0 +1,1580 @@
+
+   Agenda (PySpark)
+   -----------------
+   -> Spark - Basics & Architecture
+   -> Spark Core API
+	-> RDD Transfomations & Actions
+	-> Shared variables
+   -> Spark SQL (DataFrames)
+   -> Spark MLlib & Machine Learning
+   -> Introduction Spark Streaming
+
+   Materials
+   ---------
+	-> PDF Presentations
+	-> Code Modules
+	-> Class Notes
+	-> GitHub: https://github.com/ykanakaraju/pyspark
+
+     
+   Spark
+   ------
+  	
+	-> Spark is a unified in-memory distributed computing framework.
+
+    	-> Spark is written in Scala.
+
+	-> Spark is a polyglot
+	   -> Supports Scala, Java, Python and R
+
+	Cluster : Is a unified entity containing many nodes whose combined resources can be used to
+	distribute you storage as well as processing. 
+
+	In-memory distributed computed : The intermediate results of the compuattions can be persisted
+	in-memory and subsequent tasks can directly operate these persisted data. 
+
+
+       Spark Unified Framework
+       -----------------------
+
+	Spark provides a consistent set of APIs for processing different types of analytical workloads
+	using the same execution engine.
+
+	Batch Analytics of Unstructured Data	=> Spark Core API (Low Level API)
+	Batch Analytics of Structured Data	=> Spark SQL
+	Streaming Analytics			=> Spark Streaming, Structured Streaming
+	Predictive Analytics (ML)		=> Spark MLlib
+	Graph Parallel Computations		=> Spark GraphX
+	
+	
+    Spark Architecture
+    ------------------
+
+     	1. Cluster Manager
+		-> Jobs are submitted to CM
+		-> Spark programs can be submitted to Spark Standalone, YARN, Mesos, Kubernetes
+		-> CM will allocate executors to the application. 
+
+	2. Driver
+		-> Master Process
+		-> Contains the SparkContext
+		-> Maintain all the metadata of the user program and of RDD
+		-> Send tasks to the executors
+
+		Deploy Modes:
+		 client  -> default, the driver process runs on the client machine.
+		 cluster -> driver runs in one of the nodes in the cluster
+
+	3. Executors
+		-> Executes the tasks sent by the driver
+		-> All tasks do the same processing, but on different partitions of the data
+		-> They report the status of the tasks to the driver.
+
+	4. SparkContext
+		-> Starting point of execution 
+		-> Created inside a driver
+		-> Represents an application
+		-> Link between the driver and several tasks running in the executors
+
+
+   Getting starting with PySpark   
+   ----------------------------
+
+    1. Using your vLab (toolwire lab)		
+	  -> Connect to the lab as per the instructions given in the email. (Clicking on 'BigData Enbl' icon)
+	  -> You are connected to Windows Server. 
+	  -> Click on the "CentOS7" icon and login using username and password.
+	    (Refer to README.txt file on the desktop for username and password)
+	  
+	  1. Launch PySpark Shell
+		
+		-> Open a Terminal
+		-> Type "pyspark"
+		-> This will launch the PySpark shell.
+		-> Connect to the WebUI
+			-> Open FireFox Browser  (Application -> FireFox Menu at top-left corner)
+			-> Type "localhost:4040" in the address bar
+
+	 2. Connect to Jupyter Notebook.
+		-> Open a Terminal
+		-> Type "jupyter notebook --allow-root"
+		-> This will lauch the Jupyter Notebook web interface. 
+
+    2. Installing and Setting up PySpark on your local machine.
+
+	-> Make sure you download and install "Anaconda navigator"
+		URL: https://www.anaconda.com/products/individual
+
+	-> You can use pip install to setup pyspark.
+
+	-> You can also setup pyspark to work with Jupyter Notebook & Spyder using the instruction given
+	   in the shared document.
+		NOTE: Make sure the python & pyspark versions are compatible (Python 3.7)
+
+    3. Signup to Databrick Community Edition
+
+	    URL: https://databricks.com/try-databricks	
+	    Spend some time exploring the "The Quickstart Tutorial"  
+
+
+   RDD (Resilient Distributed Dataset)
+   -----------------------------------
+	
+    => Is the fundamental data adstraction of Spark
+
+    => RDD is a collection distributed in-memory partitions
+	-> A 'partition' is a collection of objects.
+
+    => RDDs are immutable
+
+    => RDDs are resilient (fault-tolerant)
+
+    => RDDs are lazily evaluated
+	-> Transformations does not cause execution.
+	-> Only action commands cause execution.
+
+    => RDD has two components
+	-> Meta Data : RDD Lineage DAG
+	-> Data      : A set of partitions
+
+
+   How to create RDDs ?
+   --------------------	
+	3 Ways:
+
+	1. From external files
+
+		rdd1 = sc.textFile( <filePath>, [ numPartitions ] )
+		rdd1 = sc.textFile( "E:\\Spark\\wordcount.txt", 4 )
+
+		=> default number of partitions: sc.defaultMinPartitions
+
+	2. From programmatic data
+
+		rdd1 = sc.parallelize( range(1, 101), 3 )
+		rdd1 = sc.parallelize( [2,3,1,4,3,5,6,7,8,9,8,7,6,4,5,6,3,6,5,7,8,9], 3 )
+
+		=> default number of partitions: sc.defaultParallelism
+
+	3. By applying transformations on existing RDDs. 
+
+		rdd2 = rddFile.map(lambda x: x.upper())
+
+
+   What can you do with an RDD ?
+   -----------------------------
+
+      Two things:
+
+	1. Transformations		
+             -> Transformations only cause Lineage DAGs of the RDDs to be created
+	     -> Does not cause the actual execution.		
+	
+	2. Actions
+	    -> Action commands trigger the execution on the RDD
+	    -> Converts the logical plan into a phisical execution plan and causes a set of tasks
+               to be sent to the executors.
+
+
+  RDD Lineage DAG
+  ----------------
+  
+    	-> Lineage DAG is a logical plan on how to create the partitions of the RDD when asked for.
+    	-> Lineage DAG contains a graph of all dependencies on other RDDs all the way from the very first RDD
+    	-> Lineage DAGs are created when you perform transformations
+    	-> Loagical Plan is converted to physical plan and executes the tasks when you run an 'action' command. 
+
+
+	rddFile = sc.textFile( file, 4 )
+	Lineage DAG : (4) rddFile -> sc.textFile
+		
+	rdd2 = rddFile.map(lambda x: x.upper())
+	Lineage DAG : (4) rdd2 -> rddFile.map -> sc.textFile
+
+	rdd3 = rdd2.flatMap(lambda x: x.split(" "))
+	Lineage DAG : (4) rdd3 -> rdd2.flatMap -> rddFile.map -> sc.textFile
+
+	rdd4 = rdd3.filter(lambda x: len(x) > 3)
+	Lineage DAG : (4) rdd4 -> rdd3.filter -> rdd2.flatMap -> rddFile.map -> sc.textFile
+
+        rdd4.collect()   => returns a list object
+
+
+   RDD Persistence
+   ---------------
+	rdd1 = sc.textFile( .., 4 )
+	rdd2 = rdd1.t2( ... )
+	rdd3 = rdd1.t3( ... )
+	rdd4 = rdd3.t4( ... )
+	rdd5 = rdd3.t5( ... )
+	rdd6 = rdd5.t6( ... )
+	rdd6.persist(StorageLevel.MEMORY_AND_DISK)   ---> instruction to persist the partitions of rdd6
+	rdd7 = rdd6.t7( ... )
+
+	rdd6.collect()	
+	lineage of rdd6: rdd6 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+	sc.textFile -> t3 -> t5 -> t6 => rdd6 ==> collected
+
+	rdd7.collect()
+	lineage of rdd6: rdd7 -> rdd6.t7
+	rdd6 -> t7 => rdd7  ==> collected
+
+	rdd6.unpersist()
+
+
+	Storage Levels
+        --------------	
+	1. MEMORY_ONLY		-> default, memory serialized 1x replicated
+				   partitions are persisted only in RAM (if RAM is available)
+	
+	2. MEMORY_AND_DISK	-> disk memory serialized 1x replicated
+				   partitions are persisted in RAM if RAM is available, else on disk
+
+	3. DISK_ONLY		-> disk serialized 1x replicated
+
+	4. MEMORY_ONLY_2	-> memory serialized 2x replicated	
+
+	5. MEMORY_AND_DISK_2	-> disk memory serialized 2x replicated
+
+	Commands
+        --------	
+	rdd1.persist()  
+	rdd1.persist(StorageLevel.MEMORY_AND_DISK) 
+	rdd1.cache()
+
+	rdd1.unpersist()
+       	 
+
+   Types of Transformations
+   ------------------------
+
+	1. Narrow Transformations
+	    -> Does not cause shuffling of the data from one partition to other partitions
+	    -> Partition to partition transformations
+	    -> The output RDD will have the same number of partitions as input RDD
+
+	2. Wide Transformation
+	    -> Causes shuffling of the data
+	    -> One output partition may need data from multiple input partitions
+	    -> The output RDD may have different number of partitions than input RDD
+	
+   
+   RDD Transformations
+   -------------------
+
+    1. map		P: U -> V
+			Object to Object Transformation
+			Transforms each object of the input RDD to the corresponding object of the
+			output RD by applying the function
+			Input RDD: N objects, Output RDD: N objects. 
+
+		rddFile.map(lambda x: len(x.split(" ")) ).collect()
+
+   2. filter		P: U -> Boolean 
+			The output RDD will have only those objects for which the function return True.  
+			Input RDD: N objects, Output RDD: <= N objects. 
+
+		rddFile.filter(lambda st : len(st.split(" ")) > 8).collect()
+
+   3. glom		P: None
+		   	Returns one list object per partition with all the objects of the partition	
+
+		rdd1			rdd2 = rdd1.glom()
+		
+		P0: 1,2,3,4,5,6 -> glom -> P0: [1,2,3,4,5,6]
+		P1: 2,3,5,6,7,8 -> glom -> P1: [2,3,5,6,7,8]
+		P2: 9,0,3,6,5,7 -> glom -> P2: [9,0,3,6,5,7]
+
+		rdd1.count() : 18 (int)	  rdd2.count(): 3 (list)
+
+   4. flatMap		P: U -> Iterable[V]
+			Flattens the iterables produced by the function.
+			Input RDD: N objects, Output RDD: > N objects. 
+	
+		rddWords = rddFile.flatMap(lambda x: x.split(" "))
+
+   5. mapPartitions	P: Iterable[U] -> Iterable[V]
+			partition to partion transformation
+			Transforms each input partition to an output partition by applying a function
+			on the entire partition. 
+
+		rdd1	  rdd2 = rdd1.mapPartitions(lambda p : [sum(p)] ) 
+		
+		P0: 1,2,3,4,5,6 -> mapPartitions -> P0: 21
+		P1: 2,3,5,6,7,8 -> mapPartitions -> P1: 31
+		P2: 9,0,3,6,5,7 -> mapPartitions -> P2: 30
+
+		rdd1.mapPartitions(lambda p : map(lambda x: x*10, p) ).collect()	
+
+
+   6. mapPartitionsWithIndex	P: Int, Iterable[U] -> Iterable[V]
+			Similar to mapPartitions, but we get the partition-index as additional function parameter.
+
+		 rdd1.mapPartitionsWithIndex(lambda i, p : map(lambda x: (i, x*10), p) ).collect()
+
+
+   7. distinct		P: None, Optional: numPartitions
+			Returns an RDD with distinct elements of the input RDD.	
+			Input RDD: N objects, Output RDD: <= N objects. 
+
+  
+   8. sortBy		P: U -> V, Optional: ascending (True/False), numPartitions
+			sorts the objects of the RDD based on the output of the functions.
+			Input RDD: N objects, Output RDD: N objects. 
+
+		rddWords.sortBy(lambda x: x[-1]).collect()
+		rddWords.sortBy(lambda x: x[-1], False).collect()
+		rddWords.sortBy(lambda x: x[-1], True, 5).collect()
+
+	
+   Types of RDDs
+   -------------
+
+	Two types of RDDs
+
+	-> Generic RDDs : RDD[U]
+	-> Pair RDDs: RDD[(K, V)]	
+
+
+   9. mapValues		P: U -> V
+			Applied only on Pair RDDs
+			Applies the function on only the value part of the (K,V) pairs.
+			Input RDD: N objects, Output RDD: N objects. 
+
+		rdd3 = rdd2.mapValues(lambda x: (x, x))
+
+
+   10. groupBy		P: U -> V,  Optional: numPartitions
+			Groups the objects based on the function output
+			Returns a Pair RDD where the 
+				key: unique function output
+				value: (ResultIterable) grouped values that produced the key
+
+			RDD[U].groupBy(U -> V) => RDD[(V, ResultIterable[U])]
+
+		rdd1.groupBy(lambda x: x%2).mapValues(list).collect()
+		rdd1.groupBy(lambda x: x%2, 1).mapValues(list).collect()
+
+		rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4) \
+            		.flatMap(lambda x: x.split(" ")) \
+            		.groupBy(lambda x: x, 1) \
+            		.mapValues(len)
+
+
+   11. randomSplit	P: list of ratios
+			Returns a list of RDDs split rabdomly in the specified ratios. 	
+
+		rddList = rdd1.randomSplit([0.5, 0.5])
+		rddList = rdd1.randomSplit([0.5, 0.5], 5343)  # here, 5343 is a seed.
+
+
+   12. repartition	P: numPartitions
+			Used to increase or decrease the number of partitions of the output RDD
+			Causes global shuffle.
+
+		rddWords2 = rddWords.repartition(10)
+
+
+   13. coalesce		P: numPartitions
+			Used to decrease the number of partitions of the output RDD
+			Causes partition merging
+
+		rddWords2 = rddWords.coalesce(2)
+	
+   Recommendations
+   ---------------
+	-> The size of the Partition should be approx 128 MB  
+	-> The number of partitions should be a multiple of number of CPU cores.
+	-> The number of partitions is close to 2000, bump up more then 2000
+	-> The number of cores per executor = 5
+
+
+   14. partitionBy	P: numPartitions, Optional: partitioning function
+			Applied only on Pair RDD
+			Based on the function output of the keys of the RDD, the elements of the RDD
+			are organized in partition. 
+
+		rdd3 = rdd2.partitionBy(4, lambda x: x+10)
+
+
+    15. union, intersection, subtract, cartesian
+
+ 	Let us say rdd1 has M partitions & rdd2 has N partitions
+
+	 command				# of output partitions
+	 --------------------------------------------------------------
+	 rdd1.union(rdd2)			M + N, narrow
+	 rdd1.intersection(rdd2)		M + N, wide
+	 rdd1.subtract(rdd2)			M + N, wide
+	 rdd1.cartesian(rdd2)			M * N, wide
+
+
+  ..ByKey Transformations
+  -----------------------
+     -> Applied only on pair RDD
+     -> Wide transformations (optional parameter: numPartitions)
+	 
+
+    16. sortByKey	P: None, Optional: ascending (True/False), numPartitions
+			Applied only on Pair RDDs
+			Sorts the elements of the RDD based on the key
+
+		rdd3.sortByKey().glom().collect()
+		rdd3.sortByKey(False).glom().collect()
+		rdd3.sortByKey(False, 3).glom().collect()
+
+    17. groupByKey	P: None, Optional: numPartitions
+			Applied only on Pair RDDs
+			Groups the elements of the RDD by Key
+			We get a pair RDD with unique keys and grouped values (ResultIterable)
+			NOTE: Avoid 'groupByKey' if possible. 	
+
+		rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4) \
+            		   .flatMap(lambda x: x.split(" ")) \
+            		   .map(lambda x: (x, 1)) \
+            		   .groupByKey() \
+            		   .mapValues(sum)
+
+    18. reduceByKey	P: U, U -> U, Optional: numPartitions
+			Reduces all the values of each unique-key first within each partitions and the across
+			different partitions.
+			Applied only on Pair RDDs            
+
+		rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4) \
+            		    .flatMap(lambda x: x.split(" ")) \
+            		    .map(lambda x: (x, 1)) \
+            		    .reduceByKey(lambda x, y: x + y, 1)
+
+    19. aggregateByKey		Is used to aggregate all the values of each unique key to a type
+				different that the values of (k,v) pairs.		
+				Applied on only pair RDD.
+
+		Three parameters:
+
+		1. zero-value : Is the initial value of the type of final output.
+
+		2. sequence-function: Merges all the values of each unique key with the zero-value
+				      This is applied to every partition
+
+		3. combine-function: Reduces all the different aggregated values of each unique-key
+				     across partitions. 
+
+		Fourth optional parameter:  numPartitions.
+
+		student_rdd = sc.parallelize([
+  			("Aditya", "Maths", 83), ("Aditya", "Physics", 74), ("Aditya", "Chemistry", 91), ("Aditya", "English", 82), 
+  			("Amrita", "Maths", 69), ("Amrita", "Physics", 62), ("Amrita", "Chemistry", 97), ("Amrita", "English", 80), 
+  			("Pranav", "Maths", 78), ("Pranav", "Physics", 73), ("Pranav", "Chemistry", 68), ("Pranav", "English", 87), 
+  			("Keerthana", "Maths", 87), ("Keerthana", "Physics", 93), ("Keerthana", "Chemistry", 91), ("Keerthana", "English", 74), 
+  			("Harsha", "Maths", 56), ("Harsha", "Physics", 65), ("Harsha", "Chemistry", 71), ("Harsha", "English", 68), 
+  			("Vidya", "Maths", 86), ("Vidya", "Physics", 62), ("Vidya", "Chemistry", 75), ("Vidya", "English", 83), 
+  			("Komala", "Maths", 63), ("Komala", "Physics", 69), ("Komala", "Chemistry", 64), ("Komala", "English", 60)], 3)
+ 
+		student_rdd.collect()
+
+
+		output_rdd = student_rdd.map(lambda t: (t[0], t[2])) \
+                		.aggregateByKey( (0,0),
+                        		lambda z, v: (z[0] + v, z[1] + 1),
+                        		lambda a, b: (a[0]+b[0], a[1]+b[1])) \
+                			.mapValues(lambda x: x[0]/x[1])
+
+    20. joins	-> join, leftOuterJoin, rightOuterJoin, fullOuterJoin
+
+		  RDD[(K, V)].join(RDD[(K, W)]) => RDD[(K, (V, W))]
+
+		join = names1.join(names2)   #inner Join
+		leftOuterJoin = names1.leftOuterJoin(names2)
+		rightOuterJoin = names1.rightOuterJoin(names2)
+		fullOuterJoin = names1.fullOuterJoin(names2)
+
+    21. cogroup	    =>  Join RDDs with possibly deplicate key and you want unique keys in the output
+			groupByKey on each RDD -> fullOuterJoin
+
+		[('key1', 10), ('key2', 12), ('key1', 7), ('key2', 6), ('key3', 6)]
+		=> (key1, [10, 7]) (key2, [12,6]) (key3, [6])
+
+		[('key1', 5), ('key2', 4), ('key2', 7), ('key1', 17), ('key4', 17)]
+		=> (key1, [5, 17]) (key2, [4,7]) (key4, [17])
+
+        cogroup => (key1, ([10, 7], [5, 17])) (key2, ([12,6], [4,7])) (key3, ([6], [])) (key4, ([], [17]))
+
+
+  RDD Actions
+  -----------
+
+  1. collect
+
+  2. count
+
+  3. saveAsTextFile	P: non-existing directory path
+
+  4. reduce		P: U, U -> U
+			Reduces the entire RDD into one final value of the same type.
+			Applies the reduce function iterativly first on each partition and then across partitions. 
+
+		rdd1  	
+		P0: 9, 4, 5, 6, 0, 6	 -> reduce -> -12 -> 16
+		P1: 7, 3, 4, 2, 1, 5	 -> reduce -> -8
+		P2: 7, 8, 9, 0, 3, 2, 5  -> reduce -> -20
+
+		rdd1.reduce( lambda x, y: x - y )
+
+  5. aggregate
+
+	Three Parameters:
+
+		1. zero-value  : initial value of the type of the final output
+
+		2. Sequence-function : is a function that is used to merge all the values
+		   of each parititon with the zero-value. This function is applied for each
+		   partition (narrow). 
+
+               3. Combine-function : Is a reduce function that reduces all the values per 
+	          partition produced by sequence function into one final value of the type
+                  of the zero-value.		
+
+	rdd1.aggregate( (0,0), lambda z,v: (z[0]+v, z[1]+1), lambda a,b: (a[0]+b[0], a[1]+b[1]) )
+
+	rdd2.aggregate( ("", 0, 0), 
+			lambda z, v: (z[0] + "," + str(v[0]), z[1]+v[1], z[2] if (z[2] > v[1]) else v[1]), 
+			lambda a, b: (a[0] + "," + b[0], a[1] + b[1], a[2] if (a[2] > b[2]) else b[2]) 
+		      )
+
+    6. first
+		rdd1.first()
+
+    7. take
+		rdd1.take(10)
+
+    8. takeOrdered
+
+		rdd1.takeOrdered(15)
+		rdd1.takeOrdered(15, lambda x: x%3)
+
+    9. takeSample
+
+		rdd1.takeSample(True, 15)	=> withRelacement sampling
+		rdd1.takeSample(True, 15, 575)
+
+		rdd1.takeSample(False, 15)	=> withOutRelacement sampling
+		rdd1.takeSample(False, 15, 575)
+
+   10. countByValue
+
+   11. countByKey  -> applied to pair RDDs
+
+   12. foreach	-> P: function as a parameter
+		      function is applied on all the values of the RDD, but does not returned.
+
+   13. saveAsSequenceFile
+
+
+  ========================================================
+
+   Use-Case
+   --------
+    => From cars.tsv file, fetch the average weight of each make of American origin cars. 
+       Sort the output in the desc order of average weight       
+       Save the output in a single text file.
+
+	dataset: https://github.com/ykanakaraju/pyspark/blob/master/data_git/cars.tsv
+
+	=> Please try it yourself.
+
+  ========================================================
+  
+  Shared Variables
+  ----------------
+
+
+     Closure:  A closure is all the code (all the variable and methods) that must be visible inside
+	       an task for an executor to perform its computation on the RDDs.
+
+      -> A closure is serialized and copy is sent to every executor.
+
+
+	  c = 0		# num of primes
+
+          def isPrime( n ) :
+		return 1 if n is prime
+		return 0 if n is not prime
+
+	  def f1 (n) :
+		global c
+		if ( isPrime(n) == 1 ) c = c + 1
+		return n * 2	   
+
+	  rdd1 = sc.parallelize( range(1, 4001), 4 )
+
+	  rdd2 = rdd1.map( f1 )
+
+	  rdd2.collect()
+	 
+	  print(c)     # 0
+   
+
+     Limitation of using local variables inside a closure :
+	-> Because the variables inside a closure are local they can not global state (across executors)
+	   Hence local variables can not be used to implement global counter.
+ 		
+
+    1. Accumulator variable
+
+	=> Shared Variable (shared by multiple tasks)
+	=> Maintained by the driver
+	=> Not part of the closure (hense not a local copy)
+	=> All tasks can add to this variable. 
+
+	  c = sc.accumulator(0)		# num of primes
+
+          def isPrime( n ) :
+		return 1 if n is prime
+		return 0 if n is not prime
+
+	  def f1 (n) :
+		global c
+		if ( isPrime(n) == 1 ) c.add(1)
+		return n * 2	   
+
+	  rdd1 = sc.parallelize( range(1, 4001), 4 )
+
+	  rdd2 = rdd1.map( f1 )
+
+	  rdd2.collect()
+	 
+	  print( c.value )  
+
+
+   2. Broadcast variable
+
+	=> broadcast variable is shared variable
+	=> Not part of the closure (hense not a local copy)
+	=> A copy of the broadcast variable is sent to each executor node (not to each task)
+	   All the tasks in that node, shared the same copy.
+		
+	  bc = sc.broadcast( {1: a,  2: b, 3: c, 4: d, 5: e, ........ }  )
+
+	  def f1(n):
+		global bc
+		return bc.value[n]
+		
+	
+	 rdd1 = sc.parallelize([1,2,3,4,5,...], 4)
+
+	 rdd2 = rdd1.map( f1 )     
+
+	rdd2.collect()    
+
+
+  ====================================================================
+
+    spark-submit command
+    --------------------
+
+	Spark-submit command is a single command to submit any spark application (pyspark, scala, java, R)
+	to any cluster manager (local, spark standalone, yarn, mesos, kubernetes)
+
+	spark-submit [options] <app jar | python file | R file> [app arguments]
+
+	spark-submit --master yarn
+		--deploy-mode cluster
+		--driver-memory	2G
+		--executor-memory 10G
+		--driver-cores 2
+		--executor-cores 5
+		--num-executors 20
+		E:\PySpark\spark_core\examples\wordcount.py
+
+	spark-submit --master local E:\PySpark\spark_core\examples\wordcount_cmdargs.py wordcount.txt wcout 1
+	spark-submit --master local E:\PySpark\spark_core\examples\wordcount.py
+
+
+   ============================================================
+      Spark SQL  (pyspark.sql)
+   ============================================================	
+
+      => Spark's Structured Data Processsing API
+
+	   Structured Data File Formats :  Parquet (default), ORC, JSON, CSV (delimited text file)
+	   JDBC Format : RDBMS, NoSQL Databases 
+	   Hive (is a data warehousing platform on Hadoop)
+
+      
+     => SparkSession
+
+	 -> Is the starting point of execution in Spark SQL applications
+	 -> Represents a user session inside an application
+		-> We can have multiple user sessions (SparkSession) inside an application (SparkContext)
+	-> Introduced in Spark 2.0 (before that we has sqlContext)	
+
+		spark = SparkSession \
+        		.builder \
+        		.appName("Dataframe Operations") \
+        		.config("spark.master", "local[*]") \
+        		.getOrCreate()   
+
+     => DataFrame
+	
+	-> Is the data abstract of SparkSQL	
+	-> Is a collection of in-memory distributed partitions that are immutable and lazily executed.
+	-> DataFrames is a collection of "Row" objects
+	-> DataFrame:		
+		Two Components:
+		-> Data: collection of "Rows" (in-memory partitions)
+		-> Meta Data: schema (StructType object)
+		
+
+		   StructType(
+			List(
+			    StructField(age,LongType,true),
+			    StructField(gender,StringType,true),
+			    StructField(name,StringType,true),
+			    StructField(phone,StringType,true),
+			    StructField(userid,LongType,true)
+			)
+		   )
+
+
+    Basic steps in a SparkSQL Application
+    --------------------------------------    
+
+    1. Read/load the data from source data source into DataFrame.
+		
+		inputPath = "E:\\PySpark\\data\\users.json"
+		df1 = spark.read.format("json").load(inputPath)
+		df1 = spark.read.json(inputPath)
+
+    2. Apply transformations on the DataFrame using DF API methods or using SQL queries. 
+
+	   Using DF transformation methods:
+           --------------------------------
+
+		df2 = df1.select("userid", "name", "gender", "age") \
+        		.where("age is not null") \
+        		.orderBy("age", "name") \
+        		.groupBy("age").count() \
+        		.limit(4)
+
+ 	   Using SQL:
+           ----------
+		spark.catalog.listTables()
+		df1.createOrReplaceTempView("users")
+
+		qry = """select age, count(*) as count
+         		from users
+        		where age is not null
+         		group by age
+         		order by count
+         		limit 4"""
+         
+		df3 = spark.sql(qry)
+		df3.show()
+
+    3. Write/save the dataframe into some structure destination.
+
+		df2.write.format("json").save(outputDirPath)
+		df2.write.json(outputDirPath)
+
+		df2.write.json(outputDirPath, mode="overwrite")
+		df2.write.mode("overwrite").json(outputDirPath)
+
+
+   LocalTempView & GlobalTempView
+   ------------------------------
+    
+	LocalTempView 
+		-> created at Session scope
+		-> created using df1.createOrReplaceTempView("users")
+		-> accessble only from its own SparkSession.
+
+	GlobalTempView
+		-> created at Application scope
+		-> Accessible from all SparkSessions
+		-> created using df1.createOrReplaceGlobalTempView("gusers")
+		-> Attached to a temp database called "global_temp"
+
+
+  Save Modes
+  ----------
+	Defines the behaviour when you are writing a DF to an existing directory
+	
+	-> ignore
+     	-> append
+	-> overwrite
+
+	df2.write.json(outputDirPath, mode="overwrite")
+	df2.write.mode("overwrite").json(outputDirPath)
+
+ 
+  DataFrame Transformations
+  -------------------------
+
+   1. select
+
+		df2 = df1.select("ORIGIN_COUNTRY_NAME",
+                 		"DEST_COUNTRY_NAME",
+                 		"count")
+
+		df2 = df1.select(col("ORIGIN_COUNTRY_NAME").alias("origin"),
+                 		column("DEST_COUNTRY_NAME").alias("destination"),
+                 		expr("count").cast("int"),
+                 		expr("count + 10 as newCount"),
+                 		expr("count > 365 as highFrequency"),
+                 		expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME as domestic"))
+
+   2. where / filter
+
+		df3 = df2.where("count > 200 and domestic = false")
+		df3 = df2.filter("count > 200 and domestic = false")
+
+		df3 = df2.where( col("count") > 1000 )
+
+
+   3. orderBy / sort
+		df3 = df2.orderBy("count", "origin")
+		df3 = df2.orderBy(desc("count"), asc("origin"))
+
+
+   4. groupBy => returns a 'GroupedData' on which we can apply some aggregation methods.
+
+	df3 = df2.groupBy("highFrequency", "domestic").count()
+	df3 = df2.groupBy("highFrequency", "domestic").sum("count")
+	df3 = df2.groupBy("highFrequency", "domestic").avg("count")
+	df3 = df2.groupBy("highFrequency", "domestic").max("count")
+
+	df3 = df2.groupBy("highFrequency", "domestic") \
+         	.agg( 	count("count").alias("count"),
+               		sum("count").alias("sum"),
+               		avg("count").alias("avg"),
+               		max("count").alias("max") )
+
+   5. limit
+		
+		df2 = df1.limit(10)
+
+   6. selectExpr
+
+		df2 = df1.select(expr("ORIGIN_COUNTRY_NAME as origin"),
+                 	expr("DEST_COUNTRY_NAME as destination"),
+                 	expr("count"),
+                 	expr("count + 10 as newCount"),
+                 	expr("count > 365 as highFrequency"),
+                 	expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME as domestic"))
+
+		is same as:
+
+		df2 = df1.selectExpr("ORIGIN_COUNTRY_NAME as origin",
+                 	"DEST_COUNTRY_NAME as destination",
+                 	"count",
+                 	"count + 10 as newCount",
+                 	"count > 365 as highFrequency",
+                 	"ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME as domestic")
+
+   7. withColumn
+
+		df4 = df1.withColumn( "newCount",  (col("count") + 10).cast("int") ) \
+        		.withColumn("highFrequency", expr("count > 365")) \
+        		.withColumn("domestic", expr("DEST_COUNTRY_NAME = ORIGIN_COUNTRY_NAME")) \
+        		.withColumn("count", expr("count * 10"))
+
+	        users2 = userDf.withColumn("ageGroup", 
+                           when(col("age") <= 12, "child")
+                           .when(col("age") < 20, "teenager")
+                           .when(col("age") < 60, "adult")
+                           .otherwise("senior"))	
+
+   8. withColumnRenamed
+
+		df5 = df4.withColumnRenamed("DEST_COUNTRY_NAME", "destination") \
+        		.withColumnRenamed("ORIGIN_COUNTRY_NAME", "origin")
+
+   9. drop
+		df5 = df4.drop("newCount", "highFrequency")
+
+
+   10. union, intersect, subtract
+
+	=> Operate on two DFs of the same schema.
+
+		df5 = df3.union(df4)
+		df6 = df5.intersect(df4)
+		df6 = df5.subtract(df4)
+
+   11. distinct
+
+		df1.select("ORIGIN_COUNTRY_NAME").count()
+		df1.select("ORIGIN_COUNTRY_NAME").distinct().count()
+
+   12. sample
+		
+		df2 = df1.sample(True, 0.5)
+		df2 = df1.sample(True, 0.5, 575)
+		df2 = df1.sample(True, 1.5, 575)
+
+		df2 = df1.sample(False, 0.5, 575)
+		df2 = df1.sample(False, 1.5, 575)   # error: this does not support a fraction > 1
+		
+
+   13. randomSplit
+
+		df2, df3 = df1.randomSplit([0.5, 0.5])
+		df2, df3 = df1.randomSplit([0.5, 0.5], 4564)
+
+   14. repartition
+
+		df2 = df1.repartition(4)
+		df2.rdd.getNumPartitions()
+
+		df3 = df2.repartition(2)
+		df3.rdd.getNumPartitions()
+
+		df3 = df2.repartition(2, col("DEST_COUNTRY_NAME"))
+		df3.rdd.getNumPartitions()
+		
+		df3 = df2.repartition(col("DEST_COUNTRY_NAME"))
+		df3.rdd.getNumPartitions()
+
+		NOTE: The number of output partitions is determined by "spark.sql.shuffle.partitions"
+		config property, whose default value is 200.
+
+		spark.conf.set("spark.sql.shuffle.partitions", "5")   
+
+   15. coalesce
+
+		df3 = df2.coalesce(6)
+
+   16. join   => discussed separatly
+
+
+
+   Working with different file formats
+   ------------------------------------
+
+	JSON
+		read
+			df1 = spark.read.format("json").load(inputPath)
+			df1 = spark.read.json(inputPath)
+		write
+			df2.write.format("json").save(outputDirPath)
+			df2.write.json(outputDirPath)
+	
+	Parquet
+		read
+			df1 = spark.read.format("parquet").load(inputPath)
+			df1 = spark.read.parquet(inputPath)
+		write
+			df2.write.format("parquet").save(outputDirPath)
+			df2.write.parquet(outputDirPath)
+
+	ORC
+		read
+			df1 = spark.read.format("orc").load(inputPath)
+			df1 = spark.read.orc(inputPath)
+		write
+			df2.write.format("orc").save(outputDirPath)
+			df2.write.orc(outputDirPath)
+
+	CSV (delimited text file)
+
+		read:
+			df1 = spark.read.format("csv").load(inputPath, header=True, inferSchema=True)
+			df1 = spark.read.csv(inputPath, header=True, inferSchema=True)
+			df1 = spark.read.csv(inputPath, header=True, inferSchema=True, sep="|")
+
+			moviesDf = spark.read \
+          				.option("header", True)\
+          				.option("inferSchema", True)\
+          				.csv(moviesFile)
+
+
+		write:
+			df2.write.mode("overwrite").csv(outputDirPath) # headerless
+			df2.write.mode("overwrite").csv(outputDirPath, header=True) # with header
+			df2.write.mode("overwrite").csv(outputDirPath, header=True, sep="|")
+
+		
+
+   Create an RDD from DataFrame
+   ----------------------------
+	rdd1 = df1.rdd
+
+
+   Creating a DataFrame from programmatic data
+   --------------------------------------------
+	listUsers = [(1, 'Raju', 45),
+             (2, 'Ramesh', 35),
+             (3, 'Raghu', 25),
+             (4, 'Madhu', 15),
+             (5, 'Ramya', 25),
+             (6, 'Aditya', 35),
+             (7, 'Komala', 45)]
+
+	df2 = spark.createDataFrame(listUsers, ["id", "name", "age"])
+	df2 = spark.createDataFrame(listUsers).toDF("id", "name", "age")
+
+   Creating a DataFrame from an RDD
+   --------------------------------
+    	rdd1 = spark.sparkContext.parallelize(listUsers)
+	rdd1.collect()
+
+	df2 = spark.createDataFrame(rdd1, ["id", "name", "age"])
+	df2 = spark.createDataFrame(rdd1).toDF("id", "name", "age")
+
+
+   Creating a DataFrame using programmatic schema
+   -----------------------------------------------
+
+	mySchema = StructType([
+            StructField("id", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("age", IntegerType(), True)
+        ])
+
+	df2 = spark.createDataFrame(rdd1, schema=mySchema)
+
+       -------------------------------------------
+	mySchema = StructType([
+            StructField("ORIGIN_COUNTRY_NAME", StringType(), True),
+            StructField("DEST_COUNTRY_NAME", StringType(), True),
+            StructField("count", IntegerType(), True)
+        ])
+     
+	inputPath = "E:\\PySpark\\data\\flight-data\\json\\2015-summary.json"
+	df1 = spark.read.json(inputPath, schema=mySchema)
+	#df1 = spark.read.schema(mySchema).json(inputPath)
+
+
+	df1.printSchema()
+	df1.show()
+
+
+    Joins
+    ------
+	Supported Joins: inner, left_outer, right_outer, full_outer, left_semi, left_anti
+
+	Left-Semi Join
+        --------------
+	Similar to inner join, but data comes only from left table.
+	Equivalent to the following sub-query
+
+	=> select * from emp where deptid IN (select id from dept)
+
+	Left-Anti Join
+	--------------
+	Equivalent to the following sub-query
+
+	=> select * from emp where deptid NOT IN (select id from dept)
+
+
+	DATA
+	----
+employee = spark.createDataFrame([
+    (1, "Raju", 25, 101),
+    (2, "Ramesh", 26, 101),
+    (3, "Amrita", 30, 102),
+    (4, "Madhu", 32, 102),
+    (5, "Aditya", 28, 102),
+    (6, "Pranav", 28, 100)])\
+  .toDF("id", "name", "age", "deptid")
+  
+department = spark.createDataFrame([
+    (101, "IT", 1),
+    (102, "ITES", 1),
+    (103, "Opearation", 1),
+    (104, "HRD", 2)])\
+  .toDF("id", "deptname", "locationid") 
+
+
+	SQL Approach
+	------------
+	employee.createOrReplaceTempView("emp")
+	department.createOrReplaceTempView("dept")
+
+	qry = """select *
+        	from emp left anti join dept
+        	on emp.deptid = dept.id"""
+
+	joinedDf = spark.sql(qry)
+
+	joinedDf.show()
+
+
+	DF API approach 
+        ---------------
+	Supported Joins: inner, left_outer, right_outer, full_outer, left_semi, left_anti
+
+	joinCol = employee["deptid"] == department["id"]
+	joinedDf = employee.join(department, joinCol, "left_anti")
+	joinedDf.show()
+
+	Enforcing  a broadcast join
+	--------------------------
+	joinedDf = employee.join(broadcast(department), joinCol, "left_anti")
+
+
+    Use-Case
+    --------
+	From movies.csv and ratings.csv datasets, fetch the top 10 movies with higheset average rating.
+	-> Consider only those movies which are rated by atleast 30 users
+	-> Data: movieId, title. totalRatings, averageRating
+	-> Sort the data in the DESC order of averageRating
+	-> Save the content as a single CSV file with pipe-separated-values with header.
+
+	Datasets: https://github.com/ykanakaraju/pyspark/tree/master/data_git/movielens
+
+	Try it yourself.
+  
+
+   Working with JDBC format (MySQL)
+   --------------------------------
+
+   import os
+import sys
+
+# setup the environment for the IDE
+os.environ['SPARK_HOME'] = '/home/kanak/spark-2.4.7-bin-hadoop2.7'
+os.environ['PYSPARK_PYTHON'] = '/usr/bin/python'
+
+sys.path.append('/home/kanak/spark-2.4.7-bin-hadoop2.7/python')
+sys.path.append('/home/kanak/spark-2.4.7-bin-hadoop2.7/python/lib/py4j-0.10.7-src.zip')
+
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder \
+            .appName("JDBC_MySQL") \
+            .config('spark.master', 'local') \
+            .getOrCreate()
+  
+qry = "(select emp.*, dept.deptname from emp left outer join dept on emp.deptid = dept.deptid) emp"
+                  
+df_mysql = spark.read \
+            .format("jdbc") \
+            .option("url", "jdbc:mysql://localhost/sparkdb?autoReConnect=true&useSSL=false") \
+            .option("driver", "com.mysql.jdbc.Driver") \
+            .option("dbtable", qry)  \
+            .option("user", "root") \
+            .option("password", "kanakaraju") \
+            .load()
+                
+df_mysql.show()  
+
+spark.catalog.listTables()
+
+df2 = df_mysql.filter("age > 30").select("id", "name", "age", "deptid")
+
+df2.show()   
+
+df2.printSchema()    
+
+df2.write.format("jdbc") \
+    .option("url", "jdbc:mysql://localhost/sparkdb?autoReConnect=true&useSSL=false") \
+    .option("driver", "com.mysql.jdbc.Driver") \
+    .option("dbtable", "emp2")  \
+    .option("user", "root") \
+    .option("password", "kanakaraju") \
+    .mode("overwrite") \
+    .save()      
+                                     
+spark.stop()
+
+
+   Working with Hive
+   -----------------
+	
+    Hive => data Warehousing platform built on top of Hadoop
+	    is an abstract around MapReduce and gives an SQL-like interface to analyse the data
+
+	Warehouse : directory where hive stores all the data files of managed tables.
+	MetaStore : is an RDBMS service where hive stores all ite meta store. 
+
+
+warehouse_location = abspath('spark-warehouse')
+
+spark = SparkSession \
+    .builder \
+    .appName("Datasorces") \
+    .config("spark.master", "local") \
+    .config("spark.sql.warehouse.dir", warehouse_location) \
+    .enableHiveSupport() \
+    .getOrCreate()
+    
+spark.catalog.listTables()    
+
+spark.sql("show databases").show()
+
+spark.sql("drop database if exists sparkdemo cascade")
+spark.sql("create database if not exists sparkdemo")
+
+spark.sql("use sparkdemo")
+
+spark.catalog.listTables()
+
+spark.sql("DROP TABLE IF EXISTS movies")
+spark.sql("DROP TABLE IF EXISTS ratings")
+spark.sql("DROP TABLE IF EXISTS topRatedMovies")
+    
+createMovies = """CREATE TABLE IF NOT EXISTS 
+         movies (movieId INT, title STRING, genres STRING) 
+         ROW FORMAT DELIMITED 
+         FIELDS TERMINATED BY ','"""
+    
+loadMovies = """LOAD DATA LOCAL INPATH 'E:/PySpark/data/movielens/moviesNoHeader.csv' 
+         OVERWRITE INTO TABLE movies"""
+    
+createRatings = """CREATE TABLE IF NOT EXISTS 
+         ratings (userId INT, movieId INT, rating DOUBLE, timestamp LONG) 
+         ROW FORMAT DELIMITED 
+         FIELDS TERMINATED BY ','"""
+    
+loadRatings = """LOAD DATA LOCAL INPATH 'E:/PySpark/data/movielens/ratingsNoHeader.csv' 
+         OVERWRITE INTO TABLE ratings"""
+         
+spark.sql(createMovies)
+spark.sql(loadMovies)
+spark.sql(createRatings)
+spark.sql(loadRatings)
+    
+spark.catalog.listTables()
+     
+#Queries are expressed in HiveQL
+
+moviesDF = spark.sql("SELECT * FROM movies")
+ratingsDF = spark.sql("SELECT * FROM ratings")
+
+moviesDF.show()
+ratingsDF.show()
+           
+summaryDf = ratingsDF \
+            .groupBy("movieId") \
+            .agg(count("rating").alias("ratingCount"), avg("rating").alias("ratingAvg")) \
+            .filter("ratingCount > 25") \
+            .orderBy(desc("ratingAvg")) \
+            .limit(10)
+              
+summaryDf.show()
+    
+joinStr = summaryDf["movieId"] == moviesDF["movieId"]
+    
+summaryDf2 = summaryDf.join(moviesDF, joinStr) \
+                .drop(summaryDf["movieId"]) \
+                .select("movieId", "title", "ratingCount", "ratingAvg") \
+                .orderBy(desc("ratingAvg")) \
+                .coalesce(1)
+    
+summaryDf2.show()
+  
+summaryDf2.write.mode("overwrite").format("hive").saveAsTable("topRatedMovies")
+
+summaryDf2.printSchema()
+
+spark.catalog.listTables()
+        
+topRatedMovies = spark.sql("SELECT * FROM topRatedMovies")
+topRatedMovies.show() 
+
+ ============================================================
+    Spark MLlib & Machine Learning 
+ ============================================================
+
+   ML Model => Is a learned entity
+
+    	       Learns from historic data with the help of Algorithms.
+
+               based on that laerning an ML Model can:
+
+		-> predict outputs from new inputs
+		-> predict patterns in the data
+		-> Give recommendations, forecasting, projections etc. 
+
+		
+   Terminology
+   -----------
+
+   1. Training Data (Historic data)
+
+   2. Features		: inputs, dimensions
+
+   3. Label		: output
+
+   4. ML Algorithm	: Algorithm performs iterative mathematical computation on the training data
+			  and establishes a relation between the label and features. 
+
+			  An alorithm iterates over several model with a goal to minimize the loss.
+
+   5. ML Model		: Output of Algorithm 
+			  Contains an in-built association between label and features. 
+			  This can give predictions (label) on new inputs (features)
+
+		---------------------------------------
+		<model> = <algorithm>.fit( <preparedData> )
+		---------------------------------------
+
+   6. Error
+
+   7. Loss
+   
+	X	Y	Z (label)   Prediction	Error
+	1000	1000	3050		3000	 50	
+	1000	500	2490		2500	-10	
+	500	1000	2100		2000	100
+	1100	500	2650		2700	-50
+	1200	600	? 		
+	---------------------------------------------
+				Loss: 	210/4 = 52.5
+	      	
+	Model 1:  z = 2x + y		  Loss: 52.5
+	Model 2:  z = 1.9x + 0.9y - 10    Loss: 45
+	...
+	...	   
+         
+
+   Steps in a Typical ML Project
+   -----------------------------
+
+    1. Data Collection
+
+	  output:  historic data (raw data)
+
+    2. Data Preparation
+
+	 output: Prepared Data (Feature Vector)
+
+	 Is to covert the raw data into a format that can be used with an algorithm	
+		-> All the data should be in numerical format
+		-> There should be no nulls/empty string
+		-> Cleanup the data (remove outliers)
+
+   3. Train the model using algorithm
+
+	 Output: Un-evaluated Model
+
+	Split the training data into train (70%) and test (30%) datasets
+	Train the model using train (70%) dataset
+	Get the predictions using model for test (30%) dataset
+	By comparing the predictions and actual labels from the test dataset, you can estimate the accuracy pf the model
+
+
+   4. Evaluated Model 
+	
+	Output:  Evaluated Model
+
+
+   5. Deploy the model
+
+
+   Types of Machine Learning
+   -------------------------
+	
+    1. Supervised Learning
+
+	-> The training data is labelled data (features and label)
+
+	1.1 Classification
+		-> The label is one two/few fixed values
+		-> Label: 1/0, [1,2,3,4,5]
+		-> ex: spam prediction, survival prediction etc
+
+	1.2 Regression
+		-> The label is a continuous value.
+		-> ex: house price prediction. 
+
+
+    2. Unsupervised Learning
+
+	-> The training data is unlabelled data (features only)
+
+	2.1  Clustering (Collobarative Filtering)
+
+	2.2  Dimensionality Reduction
+
+
+    3. Reinforcement Learning
+
+	-> Semi-supervised learning
+
+
+   Spark MLLib
+   ----------- 
+     ML Libraries => Spark MLLib, SciKitLearn, SAS, PyTorch
+     DL Libraries => Tensor Flow, Keras 
+
+	Two libraries:
+
+		=> pysparl.mllib   : Legacy (based on RDDs)
+		=> pyspark.ml      : Current (based on DataFrames)
+
+	
+     Tools
+     ------
+	1. Feature Tools 	 :  Feature Extractors, Feature Transformers, Feature Selector
+	2. Algorithms	 	 :  Classification, Regression, Clustering, Collaborative Filtering
+	3. Pipeline	 	 :  To define a work-flow for ML model creation
+	4. Evaluation Tools 	 :  Used to evaluate the model
+        5. Model Selection Tools :  Train-Validation Split, Cross-Validation
+	6. Utilities		 :  LinAlg, Stats
+
+   
+    Building Blocks of MLLib
+    ------------------------
+	
+	1. DataFrames
+
+	2. Feature Vector   : Is a vector object that contains all the features in numeric (Double) format.
+		Two formats:
+		  -> Dense Vector  :  Vectors.dense(0,0,0,9,5,0,0,0,5,3,0,0,7,0,0)
+		  -> Sparse Vector :  Vectors.sparse(15, [3,4,8,9,12], [9,5,5,3,7] )
+
+	3. Estimator
+
+		input:  DataFrame
+		output: Model
+		method: fit
+
+		<model> = <estimator>.fit( <dataFrame> )
+
+		Ex: All ML Algorithms, Sevaral Feature Tools (StringIndexer, OneHotEncoder)
+
+
+        4. Transformer
+
+		input: DataFrame
+		output: DataFrame
+		method: transform
+
+		<outputDf> = <transformer>.transform( <inputDf> )
+
+		Ex: All Models, Sevaral Feature Tools (Tokenizer, HashingTF)
+
+        5. Pipeline
+
+		=> Defines a set of stages containing Tranformers and Estimator.
+
+		pl = Pipeline(stages=[T1, T2, T3, E4])
+		plModel = pl.fit( df )
+
+		df => T1 => df2 => T2 => df3 -> T3 -> df4 -> E4 => plModel
+
+	
+   
+   Mini Project : Titanic - Machine Learning from Disaster
+   -------------------------------------------------------
+
+	URL: https://www.kaggle.com/c/titanic
+  
+
+PassengerId,Survived,Pclass,Name,Sex,Age,SibSp,Parch,Ticket,Fare,Cabin,Embarked
+1,0,3,"Harris",male,22,1,0,A/5 21171,7.25,,S
+2,1,1,"Cumings, Mrs.Braund, Mr. Owen  John Bradley (Florence Briggs Thayer)",female,38,1,0,PC 17599,71.2833,C85,C
+3,1,3,"Heikkinen, Miss. Laina",female,26,0,0,STON/O2. 3101282,7.925,,S
+4,1,1,"Futrelle, Mrs. Jacques Heath (Lily May Peel)",female,35,1,0,113803,53.1,C123,S
+5,0,3,"Allen, Mr. William Henry",male,35,0,0,373450,8.05,,S
+6,0,3,"Moran, Mr. James",male,,0,0,330877,8.4583,,Q
+7,0,1,"McCarthy, Mr. Timothy J",male,54,0,0,17463,51.8625,E46,S
+8,0,3,"Palsson, Master. Gosta Leonard",male,2,3,1,349909,21.075,,S
+
+
+	Label 	 : Survived
+	Features : Pclass,Sex,Age,SibSp,Parch,Fare,Embarked
+			=> features: Vector(Pclass,Sex,Age,SibSp,Parch,Fare,Embarked)
+
+		    Numerical: Pclass,Age,SibSp,Parch,Fare
+		    Categorical: Sex,Embarked
+			=> StringIndexer, OneHotEncoder
+
+
+pipeline = Pipeline(stages=[genderIndexer, embarkIndexer, genderEncoder, embarkEncoder, assembler, rf]) 
+
+
+ |-- Survived: double (nullable = true)
+ |-- Sex: string (nullable = true)
+ |-- Embarked: string (nullable = true)
+ |-- Pclass: double (nullable = true)
+ |-- Age: double (nullable = true)
+ |-- SibSp: double (nullable = true)
+ |-- Parch: double (nullable = true)
+ |-- Fare: double (nullable = true)
+ |-- indexedSex: double (nullable = true)
+ |-- indexedEmbarked: double (nullable = true)
+ |-- sexVec: vector (nullable = true)
+ |-- embarkedVec: vector (nullable = true)
+ |-- feature: vector (nullable = true)
+
+
+testDF:
+
+pipeline = Pipeline(stages=[genderIndexer, embarkIndexer, genderEncoder, embarkEncoder, assembler, rf]) 
+
+ |-- Survived: double (nullable = true)
+ |-- Sex: string (nullable = true)
+ |-- Embarked: string (nullable = true)
+ |-- Pclass: double (nullable = true)
+ |-- Age: double (nullable = true)
+ |-- SibSp: double (nullable = true)
+ |-- Parch: double (nullable = true)
+ |-- Fare: double (nullable = true)
+
+ |-- indexedSex: double (nullable = true)
+ |-- indexedEmbarked: double (nullable = true)
+ |-- sexVec: vector (nullable = true)
+ |-- embarkedVec: vector (nullable = true)
+ |-- feature: vector (nullable = true)
+
+ |-- rawprediction: vector (nullable = true)
+ |-- probabilty: vector (nullable = true)
+ |-- prediction: double (nullable = true)
+
+
+ =====================================================
+      Introduction to Spark Streaming
+ =====================================================
+   
+
+      Spark Streaming
+
+	  => microbatch based processing
+	  => Provides "seconds" scale latency.  (near-real-time processing)
+
+
+      StreamingContext :
+	  -> Is the starting point of execution
+	  -> Defines a micro-batch window
+	  -> Each micro-batch is an RDD
+
+       DStream (discretized stream)
+	-> Is a continuous flow of RDDs.
+
+	  
+  	# Create a local StreamingContext with two threads and batch interval of 1 sec.
+	sc = SparkContext("local[2]", "NetworkWordCount")
+	ssc = StreamingContext(sc, 1)
+
+	lines = ssc.socketTextStream("localhost", 9999)
+	words = lines.flatMap(lambda line: line.split(" "))
+	pairs = words.map(lambda word: (word, 1))
+	wordCounts = pairs.reduceByKey(lambda x, y: x + y)
+	wordCounts.print()
+
+	ssc.start()             
+	ssc.awaitTermination() 
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
