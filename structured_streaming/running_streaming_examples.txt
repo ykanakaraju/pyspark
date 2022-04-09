@@ -14,6 +14,8 @@ bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/sock
 bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/socketstream_wordcount_2.py
 bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/socketstream_wordcount_3.py
 
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/socketstream_filesink_csv.py
+
 #-------------------------------------------------------
 # File Streams
 #-------------------------------------------------------
@@ -43,10 +45,8 @@ bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/rate
         
 
     bin/spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/kafkastream_kafkasource.py
-    
     bin/spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/kafkastream_kafkasource_wordcount.py
-
-    bin/spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/dev1.py
+    bin/spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/kafkastream_kafkasink.py
 
 
 
