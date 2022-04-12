@@ -653,7 +653,7 @@ rdd1.glom().collect()
     1. Accumulator variable
 
 	-> Maintained by the driver
-	-> Not part of closure 9hnnse not a local copy)
+	-> Not part of closure (not a local copy)
 	-> All tasks can add to this accumulator. 
 	-> All tasks share one copy of the variable maintained at the driver side.
 	-> Used to implement global counter
