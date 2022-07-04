@@ -1,0 +1,348 @@
+
+ Agenda ( PySpark )
+  --------------------------
+   -> Spark - Basics & Architecture
+   -> Spark Core API
+	-> RDD Transformations and Actions
+	-> Spark Shared Variables
+        -> Spark-Submit
+   -> Spark SQL
+	-> DataFrame Operations
+	-> Integration with MySQL & Hive
+	-> SQL Optimizations & Tuning
+   -> Spark Streaming
+	-> DStreams API (introduction)
+	-> Structured Streaming
+
+
+  Materials
+  ---------
+	=> PDF Presentations
+	=> Code Modules
+	=> Class Notes
+	=> Github: https://github.com/ykanakaraju/pyspark
+
+  Spark
+  -----
+
+	Is an open source distributed computing framework running on a cluster and performs big data anlytics
+        using well defined programming constructs. 
+
+	-> Spark is written in SCALA programming language
+
+        -> Spark is an in-memory framework.
+		=> The intermediate results can be persisted in memory and subsequent tasks can run on these
+		   persisted intermediate results. 
+
+        -> Spark is a unified analytics framework
+		=> Spark provides a consisted set of APIs for processing different analytics workloads
+		   using the same execution engine.
+
+		   1. Spark Core  	: Batch Processing of unstructured data
+		   2. Spark SQL   	: Batch Processing of structured data
+		   3. Spark Streaming	: Stream analytics (real-time)
+		   4. Spark MLlib	: Predictive analytics (machine learning)
+		   5. Spark GraphX	: Graph parallel computations. 
+
+	-> Spark is a polyglot
+		=> Supports multiple programming languages - Scala, Java, Python, R
+
+
+    
+   Spark Architecture & Building Blocks
+   ------------------------------------
+
+        1. Cluster Manager
+		-> Jobs are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
+
+	2. Driver
+		-> Master process
+		-> Runs the SparkContext object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
+
+		Deploy Modes:
+		1. Client : default, driver runs on the client. 
+		2. Cluster : driver runs on one of the nodes on the cluster.
+
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> receives the tasks from the Driver
+		-> all tasks runs the same execution code but on different partitions of the data
+		-> the status of tasks os reported to the driver.
+	
+   
+    Getting started with Spark development
+    --------------------------------------
+    1. Working in your vLab
+
+	
+    2. Installing Spyder on your personal machine.
+
+	  => Make sure you install "Anaconda Distribution"
+	     => https://www.anaconda.com/products/distribution
+
+	  => Setting up PySpark to work in Spyder
+		=> Follow the instruction given in the shared document.
+		  https://github.com/ykanakaraju/pyspark/blob/master/Pyspark-JupyterNotebooks-Windows-Setup.pdf
+
+    3. Signup to Databricks Community Edition - Free account
+	  Signup: https://databricks.com/try-databricks
+	
+
+    
+    Spark Core API
+    -------------- 
+       => Is the low level API
+    
+       => Data abstraction: RDD
+
+
+    RDD (Resilient distributed dataset)
+    -----------------------------------
+
+	=> RDD is the fundamental data abstraction.
+
+	=> RDD is a collection of distributed in-memory partition
+		-> A partition is a collection of objects.
+
+	=> RDDs are immutable
+
+	=> RDDs are lazily evaluated
+		-> Only action commands trigger execution
+		-> Transformations only cause lineage DAGs to be created.
+
+	=> RDDs are resilient to non-availability of in-memory partitions
+
+
+   Creating RDDs
+   --------------
+
+	3 ways:
+
+	1. Creating RDDs from external data files
+		rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+
+		rddFile = sc.textFile("E:\\Spark\\wordcount.txt")
+		=> default number fo partitions is given by sc.defaultMinPartitions
+
+	2. Creating RDDs from programmatic data
+		rdd1 = sc.parallelize( [4,2,3,1,5,4,6,7,8,9,8,7,6,3,5,4,7,6,8,9,0], 3)
+
+		rdd1 = sc.parallelize( [4,2,3,1,5,4,6,7,8,9,8,7,6,3,5,4,7,6,8,9,0])
+		=> default number fo partitions is given by sc.defaultParallelism
+
+        3. By applying transformations on existing RDDs
+		
+		rdd2 = rdd1.map(lambda x: x*100)
+
+   RDD Operations
+   --------------	
+	Two operations:
+
+	1. Transformations	
+		-> Returns an RDD
+		-> Does not cause execution
+		-> Transformation only create RDD Lineage DAGs
+
+        2. Actions
+		-> Trigger execution of the RDD
+		-> Produces output
+		-> Converts thr logical Plan into a physical execution plan.
+
+
+   RDD Lineage DAG
+   ---------------
+   	RDD Lineage DAG is logical plan on how to compute RDD partitions.
+   	This tracks the hierarchy of RDDs all the way from the very forst RDD.
+
+	rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+	Lineage DAG: rddFile -> sc.textFile
+
+	rddWords = rddFile.flatMap(lambda x: x.split(" "))
+	Lineage DAG: rddWords -> rddFile.flatMap -> sc.textFile
+
+	rddPairs = rddWords.map(lambda x: (x, 1))
+	Lineage DAG: rddPairs -> rddWords.map -> rddFile.flatMap -> sc.textFile
+
+	rddWc = rddPairs.reduceByKey(lambda x, y: x + y)
+	Lineage DAG: rddWc -> rddPairs.reduceByKey -> rddWords.map -> rddFile.flatMap -> sc.textFile
+
+
+  RDD Persistence
+  ---------------
+	rdd1 = sc.textFile(...., 3)
+	rdd2 = rdd1.t1(...)
+	rdd3 = rdd1.t2(...)
+	rdd4 = rdd3.t3(...)
+	rdd5 = rdd3.t4(...)
+	rdd6 = rdd5.t5(...)
+	rdd6.persist()  ----> instruction to spark to save rdd6 partition
+	rdd7 = rdd6.t6(...)
+
+	rdd6.collect()
+	        => Lineage of rdd6:  rdd6 -> rdd5.t5 -> rdd3.t4 -> rdd1.t2 -> sc.textFile
+		[ textFile, t2, t4, t5 ]  => collected
+
+       rdd7.collect()	
+	       => Lineage of rdd7:  rdd7 -> rdd6.t6
+		[ t6 ]  => collected
+
+       rdd6.unpersist()
+
+
+	Storage Levels (How to persist)
+        -------------------------------	
+	1. MEMORY_ONLY		: (default) Memory Serialized 1x Replicated
+	2. MEMORY_AND_DISK	: Disk Memory Serialized 1x Replicated
+	3. DISK_ONLY		: Disk Serialized 1x Replicated
+	4. MEMORY_ONLY_2	: Memory Serialized 2x Replicated
+	5. MEMORY_AND_DISK_2	: Disk Memory Serialized 2x Replicated	
+
+
+	Persistence Commands
+        ---------------------
+	rdd1.cache()    				=> in-memory persistence
+	rdd1.persist()  				=> in-memory persistence
+	rdd1.persist( StorageLevel.MEMORY_AND_DISK )
+
+	rdd1.unpersist()		
+
+
+   Executor's memory structure
+   ----------------------------
+  	Reference URL: https://spark.apache.org/docs/latest/configuration.html
+
+	Let us assume, we request executors with 10 GB RAM.
+	
+	-> Cluster Manager allocates exectors with 10.3 GB RAM
+
+	1. Reserved Memory  : 300 MB
+		-> Spark's internal usage. 
+
+	2. Spark Memory (spark.memory.fraction: 0.6) => 6 GB
+		-> Used for RDD execution and storage
+
+		2.1 Execution Memory
+			-> Used for execution of RDD tasks and creating RDD partitions. 
+
+		2.2 Storage Memory (spark.memory.storageFraction = 0.5)  => 3 GB
+			-> Used for RDD persistence and storing broadcast variables.
+
+            -> Storage memory can not evict execution memory even if execution memory is
+               using more than its 3 GB limit. It has to wait until more memory becomes 
+	       available.
+
+	    -> Execution memory can evict some partitions from storage, if it requires more
+	       memory. But, it can evict only excess portion that is used by storage beyond its
+ 	       3 GB limit. 
+
+	3. User Memory (1 - spark.memory.fraction = 0.4) => 4 GB
+		-> Used for user code (Python/Scala/Java etc)
+
+   
+   Types of Transformations
+   ------------------------
+
+	1. Narrow Transformations
+	    -> Does not cause shuffling of the data from one partition to other partitions
+	    -> Partition to partition transformations
+	    -> The output RDD will have the same number of partitions as input RDD
+
+	2. Wide Transformation
+	    -> Causes shuffling of the data
+	    -> One output partition may need data from multiple input partitions
+	    -> The output RDD may have different number of partitions than input RDD 
+
+
+  RDD Transformations
+  -------------------
+
+   1. map			P: U -> V
+				Object to object transformation
+				Input RDD: N objects, Output RDD: N objects 
+
+		rddFile.map(lambda x : x.split(" ")).collect()
+
+   2. filter			P: U -> Boolean
+				Only those objects for which the function returns True will be there in the
+				output
+				Input RDD: N objects, Output RDD: <= N objects
+
+		rddFile.filter(lambda a: len(a.split(" ")) > 8).collect()
+
+   3. glom			P: None
+				Returns one list object per partition with all objects of the partition.
+
+
+		rdd1		      rdd2 = rdd1.glom()
+		P0: 6,3,4,5,1 -> glom -> P0: [6,3,4,5,1]
+		P1: 6,8,7,9,0 -> glom -> P1: [6,8,7,9,0]
+		P2: 3,6,0,7,8 -> glom -> P2: [3,6,0,7,8]
+
+		rdd1.count() = 15 (Int)   rdd2.count() = 3 (list)
+		
+		rdd1.glom().map(lambda x: max(x)).collect()
+
+   4. flatMap			P: U -> Iterable[V]
+				flatMap flattens the iterables produced by the function.
+				Input RDD: N objects, Output RDD: >= N objects
+
+		rddFile.flatMap(lambda x: x.split(" ")).collect()
+
+   5. mapPartitions		P: Iterable[U] -> Iterable[V]
+				partition to partition transformation	
+
+		rdd1      rdd2 = rdd1.mapPartitions(lambda p: [sum(p)] )
+		P0: 6,3,4,5,1 -> mapPartitions -> P0: 19
+		P1: 6,8,7,9,0 -> mapPartitions -> P1: 30
+		P2: 3,6,0,7,8 -> mapPartitions -> P2: 24
+
+
+   6. mapPartitionsWithIndex	P: Int, Iterable[U] -> Iterable[V]
+				Similar to mapPartitions, but we get partition-index as an additional 
+				function parameter
+
+		P0: 6,3,4,5,1 -> mapPartitionsWithIndex -> P0: 19
+		P1: 6,8,7,9,0 -> mapPartitionsWithIndex -> P1: 6,8,7,9,0
+		P2: 3,6,0,7,8 -> mapPartitionsWithIndex -> P2: 24
+
+		rdd1.mapPartitionsWithIndex(lambda i, p: [sum(p)] if (i != 1) else p ).glom().collect()
+
+   7. distinct			P: None, Optional: numPartitions
+				returns distict objects of the RDD
+				decides the partition placements based on hash-partitioning.
+
+		rddWords.distinct().collect()
+
+   8. sortBy			P: U -> V, , Optional: ascending (True/False), numPartitions
+				The objects of the RDD are sorted based on function output. 
+
+		rdd1.sortBy(lambda x: x%7).glom().collect()
+		rdd1.sortBy(lambda x: x%7, False).glom().collect()
+		rdd1.sortBy(lambda x: x%7, True, 2).glom().collect()
+
+     
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
