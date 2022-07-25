@@ -51,13 +51,30 @@
    Spark Architecture
    ------------------
 
-    1. Cluster Manager
+       1. Cluster Manager
+		-> Jobs are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
 
-    2. Driver Master
+	2. Driver
+		-> Master process
+		-> Runs the SparkContext object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
 
-    3. Executor Processes
+		Deploy Modes:
+		1. Client : default, driver runs on the client. 
+		2. Cluster : driver runs on one of the nodes on the cluster.
 
-    4. Spark Context
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> receives the tasks from the Driver
+		-> all tasks runs the same execution code but on different partitions of the data
+		-> the status of tasks os reported to the driver.
 
 
    Getting started with PySpark
@@ -118,9 +135,15 @@
      --------------
 	Two types of operations:
 
-	1. Transformations
+	1. Transformations	
+		-> Returns an RDD
+		-> Does not cause execution
+		-> Transformation only create RDD Lineage DAGs
 
-	2. Actions 
+        2. Actions
+		-> Trigger execution of the RDD
+		-> Produces output
+		-> Converts thr logical Plan into a physical execution plan. 
 
 
      RDD Lineage DAG
@@ -140,16 +163,6 @@
 	
 
      Note: rdd1.getNumPartitions() returns the number of partitions of the rdd
-
-
-
-   Types of Transformations
-   ------------------------
-
-	1. Narrow Transformation
-
-
-	2. Wide Transformations
 
 
    RDD Persistence
@@ -201,8 +214,49 @@
 	
 
    Executor's memory structure
-   ---------------------------
+   ----------------------------
+  	Reference URL: https://spark.apache.org/docs/latest/configuration.html
 
+	Let us assume, we request executors with 10 GB RAM.
+	
+	-> Cluster Manager allocates exectors with 10.3 GB RAM
+
+	1. Reserved Memory  : 300 MB
+		-> Spark's internal usage. 
+
+	2. Spark Memory (spark.memory.fraction: 0.6) => 6 GB
+		-> Used for RDD execution and storage
+
+		2.1 Execution Memory
+			-> Used for execution of RDD tasks and creating RDD partitions. 
+
+		2.2 Storage Memory (spark.memory.storageFraction = 0.5)  => 3 GB
+			-> Used for RDD persistence and storing broadcast variables.
+
+            -> Storage memory can not evict execution memory even if execution memory is
+               using more than its 3 GB limit. It has to wait until more memory becomes 
+	       available.
+
+	    -> Execution memory can evict some partitions from storage, if it requires more
+	       memory. But, it can evict only excess portion that is used by storage beyond its
+ 	       3 GB limit. 
+
+	3. User Memory (1 - spark.memory.fraction = 0.4) => 4 GB
+		-> Used for user code (Python/Scala/Java etc)
+
+
+   Types of Transformations
+   ------------------------
+
+	1. Narrow Transformations
+	    -> Does not cause shuffling of the data from one partition to other partitions
+	    -> Partition to partition transformations
+	    -> The output RDD will have the same number of partitions as input RDD
+
+	2. Wide Transformation
+	    -> Causes shuffling of the data
+	    -> One output partition may need data from multiple input partitions
+	    -> The output RDD may have different number of partitions than input RDD
 
 
    RDD Transformations
