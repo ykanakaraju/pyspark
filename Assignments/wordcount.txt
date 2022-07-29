@@ -1,0 +1,14 @@
+hadoop spark scala flatmap map groupby spark spark
+hadoop scala flume oozie sqoop hive hive spark spark
+mapreduce hadoop hive hadoop hdfs flatmap rdd scala
+spark scala transformations actions rdd rdd rdd rdd
+spark scala rdd transformations actions rdd rdd rdd
+hadoop spark scala flatmap map groupby spark spark
+hadoop scala flume oozie sqoop hive hive spark spark
+mapreduce hadoop hive hadoop hdfs flatmap rdd scala
+spark scala transformations actions rdd rdd rdd rdd
+spark scala rdd transformations actions rdd rdd rdd
+hadoop spark scala flatmap map groupby spark spark
+hadoop scala flume oozie sqoop hive hive spark spark
+mapreduce hadoop hive hadoop hdfs flatmap rdd scala
+spark scala transformations actions rdd rdd rdd rdd
