@@ -1,0 +1,212 @@
+
+ Agenda (PySpark)
+ -----------------
+   Spark - Basics & Architecture
+   Spark Core API
+	-> RDD - Transformations & Actions
+	-> RDD shared variables
+   Spark Submit command
+   Spark SQL
+	-> DataFrame Operations
+	-> Integrations - RDBMS & Hive
+	-> Spark Optimizations & Tuning
+   Spark Streaming
+	-> Structured Streaming
+	-> Dstreams API (introduction)
+
+
+  Materials
+  ---------
+	=> PDF Presentations
+	=> Code Modules 
+	=> Class Notes 
+        => Github: https://github.com/ykanakaraju/pyspark
+
+ 
+  Spark
+  ----- 
+
+      Spark is wriiten in SCALA programming language
+
+      Spark is a unified in-memory distributed computing framework.  
+   
+      Computing Cluster : A unified entity that consitutes many nodes whose cumulative resources 
+      (RAM, CPU Cores, Disk) can be use to distribute your storage or processing.
+
+      In-memory => The intermediate results (partitions) can be persisted in RAM and subsequent
+      transformations that read those in-memory partitions (assuming you have enough RAM)
+      
+
+      Spark Unified Stack
+	Spark comes with a unified set of APIs for performing computations on different Analytics
+        Workloads.
+	
+		Batch Analytics of Unstructured data	-> Spark Core API
+		Batch Analytics of Structured data	-> Spark SQL
+		Stream Analytics			-> Spark Streaming
+        	Predictive Analytics		        -> Spark MLlib
+		Graph Parallel Computation		-> Spark GraphX
+       
+
+     Spark supports multiple cluster managers
+        -> Local
+	-> Spark Standalone
+        -> YARN
+	-> Mesos
+	-> Kubernetes
+     
+     Spark is a polyglot
+	-> Scala  (native language)
+	-> Java
+	-> Python 
+	-> R
+
+
+   Getting started with PySpark
+   ----------------------------
+
+    1. Working in your vLab
+
+        -> Login in to Ubuntu VM
+	
+	  1.1 PySpark Shell
+		=> pyspark   (type on a terminal)
+
+	  1.2 Spyder IDE   
+		=> Search for spyder and launch
+		=> If spyder is not found, you can install it
+			pip install spyder
+			sudo apt install spyder
+
+	  1.3 Jupyter notebooks
+		=> Open a terminal
+		=> Type :
+			jupyter notebook
+			jupyter notebook --allow-root
+
+    2. Setup PySpark environment on your local machine	 
+
+	 -> Make sure "Anaconda" is installed and configured. 
+	 -> Try: "pip install pyspark"
+	    OR
+	 -> Follow the instructions given in the shared document
+	   
+  
+    3. Databricks Community Edition  (Free Signup)
+
+	     https://docs.databricks.com/getting-started/community-edition.html
+	     
+	     Signup link: https://www.databricks.com/try-databricks
+		=> Make sure you click on "Community Edition" option 
+	     Login: https://community.cloud.databricks.com/login.html
+
+
+   Spark Architecture (Building Blocks)
+   ------------------------------------
+
+
+    	1. Cluster Manager
+		-> Jobs are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
+
+	2. Driver
+		-> Master process
+		-> Runs the SparkContext object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
+
+		Deploy Modes:
+		1. Client : default, driver runs on the client. 
+		2. Cluster : driver runs on one of the nodes on the cluster.
+
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> receives the tasks from the Driver
+		-> all tasks runs the same execution code but on different partitions of the data
+		-> the status of tasks os reported to the driver.
+
+
+    RDD (Resiliant Distributed Dataset)
+    -----------------------------------
+
+	=> Fundamental data abstraction for Spark Core API
+
+	=> RDD has two components
+
+	   RDD metadata => RDD Lineage DAG (logical plan) maintained by Driver
+	   RDD data => A colletion of distributed in-memory partitions.
+		       -> Each partition is a collection of objects.
+
+
+    Creating RDDs
+    --------------
+
+	Three ways
+
+	1. Create an RDD from some external data source (such as a text file)
+
+		rdd1 = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+
+	2.   ??
+
+
+	3. By applying transformations on existsing RDDs
+
+		rdd2 = rdd1.flatMap(lambda x: x.split(" "))
+
+    RDD Operations
+    --------------
+
+	Two types of operations
+
+	1. Transformations
+		-> Only create RDD linage DAGS
+		-> Does not cause execution
+
+	2. Actions
+		-> Trigger execution of an RDD
+		-> Generates output.
+
+
+    RDD Lineage DAG
+    ---------------
+
+	=> Lineage DAG is a logical plan of an RDD which maintains the hierarchy of dependencies all the 
+           way upto very first RDD
+
+        => Lineage DAGs are created when you perform a transformation
+
+	=> Lineage DAGs are maintained by the Driver         
+
+	rdd1 = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+		Lineage: (4) rdd1 -> sc.textFile  (E:\\Spark\\wordcount.txt)
+
+	rddWords = rddFile.flatMap(lambda x: x.split(" "))
+		Lineage: (4) rddWords -> rddFile.flatMap -> sc.textFile
+
+        rddPairs = rddWords.map(lambda x: (x, 1))
+		Lineage: (4) rddPairs -> rddWords.map -> rddFile.flatMap -> sc.textFile
+    
+	rddWordCount = rddPairs.reduceByKey(lambda x, y: x + y)
+		Lineage: (4) rddWordCount -> rddPairs.reduceByKey -> rddWords.map -> rddFile.flatMap -> sc.textFile
+
+
+   
+    
+
+
+
+
+    
+
+
+
+
+
+
+
