@@ -1,0 +1,685 @@
+POC:  Sneha - 2108194
+
+ Agenda (PySpark)
+ -----------------
+   Spark - Basics & Architecture
+   Spark Core API
+	-> RDD - Transformations & Actions
+	-> RDD shared variables
+   Spark Submit command
+   Spark SQL
+	-> DataFrame Operations
+	-> Integrations - RDBMS & Hive
+	-> Spark Optimizations & Tuning
+   Spark Streaming
+	-> Structured Streaming
+	-> Dstreams API (introduction)
+
+
+  Materials
+  ---------
+	=> PDF Presentations
+	=> Code Modules 
+	=> Class Notes 
+        => Github: https://github.com/ykanakaraju/pyspark
+
+ 
+  Spark
+  ----- 
+
+      Spark is wriiten in SCALA programming language
+
+      Spark is a unified in-memory distributed computing framework.  
+   
+      Computing Cluster : A unified entity that consitutes many nodes whose cumulative resources 
+      (RAM, CPU Cores, Disk) can be use to distribute your storage or processing.
+
+      In-memory => The intermediate results (partitions) can be persisted in RAM and subsequent
+      transformations that read those in-memory partitions (assuming you have enough RAM)
+      
+
+      Spark Unified Stack
+	Spark comes with a unified set of APIs for performing computations on different Analytics
+        Workloads.
+	
+		Batch Analytics of Unstructured data	-> Spark Core API
+		Batch Analytics of Structured data	-> Spark SQL
+		Stream Analytics			-> Spark Streaming
+        	Predictive Analytics		        -> Spark MLlib
+		Graph Parallel Computation		-> Spark GraphX
+       
+
+     Spark supports multiple cluster managers
+        -> Local
+	-> Spark Standalone
+        -> YARN
+	-> Mesos
+	-> Kubernetes
+     
+     Spark is a polyglot
+	-> Scala  (native language)
+	-> Java
+	-> Python 
+	-> R
+
+
+   Getting started with PySpark
+   ----------------------------
+
+    1. Working in your vLab
+
+        -> Login in to Ubuntu VM
+	
+	  1.1 PySpark Shell
+		=> pyspark   (type on a terminal)
+
+	  1.2 Spyder IDE   
+		=> Search for spyder and launch
+		=> If spyder is not found, you can install it
+			pip install spyder
+			sudo apt install spyder
+
+	  1.3 Jupyter notebooks
+		=> Open a terminal
+		=> Type :
+			jupyter notebook
+			jupyter notebook --allow-root
+
+    2. Setup PySpark environment on your local machine	 
+
+	 -> Make sure "Anaconda" is installed and configured. 
+	 -> Try: "pip install pyspark"
+	    OR
+	 -> Follow the instructions given in the shared document
+	   
+  
+    3. Databricks Community Edition  (Free Signup)
+
+	     https://docs.databricks.com/getting-started/community-edition.html
+	     
+	     Signup link: https://www.databricks.com/try-databricks
+		=> Make sure you click on "Community Edition" option 
+
+	     Login: https://community.cloud.databricks.com/login.html
+
+
+		Downloading output from Databricks
+                ----------------------------------
+
+		
+		/FileStore/<FILEPATH>
+		https://community.cloud.databricks.com/files/<FILEPATH>?o=4949609693130439#tables/new/dbfs
+
+		Example:
+		/FileStore/tables/output/carsFeb23/part-00000
+		https://community.cloud.databricks.com/files/tables/output/carsFeb23/part-00000?o=1072576993312365#tables/new/dbfs
+
+
+
+   Spark Architecture (Building Blocks)
+   ------------------------------------
+
+    	1. Cluster Manager
+		-> Jobs are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
+
+	2. Driver
+		-> Master process
+		-> Runs the SparkContext object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
+
+		Deploy Modes:
+		1. Client : default, driver runs on the client. 
+		2. Cluster : driver runs on one of the nodes on the cluster.
+
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> receives the tasks from the Driver
+		-> all tasks runs the same execution code but on different partitions of the data
+		-> the status of tasks is reported to the driver.
+
+
+    RDD (Resiliant Distributed Dataset)
+    -----------------------------------
+
+	=> Fundamental data abstraction for Spark Core API
+
+	=> RDD has two components
+
+	   RDD metadata => RDD Lineage DAG (logical plan) maintained by Driver
+	   RDD data     => A colletion of distributed in-memory partitions.
+		           -> Each partition is a collection of objects.
+
+        => RDD partitions are immutable
+
+        => RDDs are lazily evaluated
+		-> Transformations does not cause execution
+		-> Action commands triggers exection
+
+
+    Creating RDDs
+    --------------
+
+       Three ways
+
+	1. Create an RDD from some external data source (such as a text file)
+
+		rdd1 = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+
+		=> default partitions: sc.defaultMinPartitions
+				       [Equal to 2 if cores allocated >= 2, else 1]
+
+	2. Create an RDD from programmatic data (such as a collection)
+
+		rdd1 = sc.parallelize( [1,2,1,3,3,5,3,5,7,8,4,7,8], 2)
+
+		=> default partitions: sc.defaultParallelism
+				       [Equal to the number of cores allocated to your app]
+
+	3. By applying transformations on existsing RDDs
+
+		rdd2 = rdd1.flatMap(lambda x: x.split(" "))
+
+    RDD Operations
+    --------------
+
+	Two types of operations
+
+	1. Transformations
+		-> Only create RDD linage DAGS
+		-> Does not cause execution
+
+	2. Actions
+		-> Trigger execution of an RDD
+		-> Generates output.
+
+
+    RDD Lineage DAG
+    ---------------
+
+	=> Lineage DAG is a logical plan of an RDD which maintains the hierarchy of dependencies all the 
+           way upto very first RDD
+
+        => Lineage DAGs are created when you perform a transformation
+
+	=> Lineage DAGs are maintained by the Driver         
+
+	rdd1 = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+		Lineage: (4) rdd1 -> sc.textFile  (E:\\Spark\\wordcount.txt)
+
+	rddWords = rddFile.flatMap(lambda x: x.split(" "))
+		Lineage: (4) rddWords -> rddFile.flatMap -> sc.textFile
+
+        rddPairs = rddWords.map(lambda x: (x, 1))
+		Lineage: (4) rddPairs -> rddWords.map -> rddFile.flatMap -> sc.textFile
+    
+	rddWordCount = rddPairs.reduceByKey(lambda x, y: x + y)
+		Lineage: (4) rddWordCount -> rddPairs.reduceByKey -> rddWords.map -> rddFile.flatMap -> sc.textFile
+
+   
+  Types of Transformations
+  ------------------------
+
+	1. Narrow Transformations
+	    -> Does not cause shuffling of the data from one partition to other partitions
+	    -> Partition to partition transformations
+	    -> The output RDD will have the same number of partitions as input RDD
+
+	2. Wide Transformation
+	    -> Causes shuffling of the data
+	    -> One output partition may need data from multiple input partitions
+	    -> The output RDD may have different number of partitions than input RDD
+
+
+  RDD Persistence
+  ---------------
+
+	rdd1 = sc.textFile( .., 3 )
+	rdd2 = rdd1.t2(..)
+	rdd3 = rdd1.t3(..)
+	rdd4 = rdd3.t4(..)
+	rdd5 = rdd3.t5(..)
+	rdd6 = rdd5.t6(..)
+	rdd6.persist( StorageLevel.MEMORY_AND_DISK )         -> instruction to save the rdd6 partitions
+	rdd7 = rdd6.t7(..)
+
+	rdd6.collect()
+	Lineage DAG: rdd6 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+		-> [textFile, t3, t5, t6]  -> rdd6
+
+	rdd7.collect()
+	Lineage DAG: rdd7 -> rdd6.t7 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+		-> [t7]  -> rdd7
+
+	rdd6.unpersist()	
+
+
+        Storage Levels
+        --------------	
+	1. MEMORY_ONLY	        => default. Memory Serialized 1x Replicated
+	2. MEMORY_AND_DISK      => Disk Memory Serialized 1x Replicated
+        3. DISK_ONLY            => Disk Serialized 1x Replicated
+        4. MEMORY_ONLY_2	=> Memory Serialized 2x Replicated
+	5. MEMORY_AND_DISK_2    => Disk Memory Serialized 2x Replicated
+
+	Commands
+	--------
+
+	rdd1.cache()     -> im-memory persistence
+	rdd1.persist()   -> im-memory persistence
+	rdd1.persist(StorageLevel.MEMORY_AND_DISK) -> using custom storage level
+
+	rdd1.unpersist()
+	
+
+   Executors Memory Structure
+   --------------------------
+        Let us assume, we request executors with 10 GB RAM.
+	
+	-> Cluster Manager allocates exectors with 10.3 GB RAM
+
+	1. Reserved Memory  : 300 MB
+		-> Spark's internal usage. 
+
+	2. Spark Memory (spark.memory.fraction: 0.6) => 6 GB
+		-> Used for RDD execution and storage
+
+		2.1 Execution Memory
+			-> Used for execution of RDD tasks and creating RDD partitions. 
+
+		2.2 Storage Memory (spark.memory.storageFraction = 0.5)  => 3 GB
+			-> Used for RDD persistence and storing broadcast variables.
+
+            -> Storage memory can not evict execution memory even if execution memory is
+               using more than its 3 GB limit. It has to wait until more memory becomes 
+	       available.
+
+	    -> Execution memory can evict some partitions from storage, if it requires more
+	       memory. But, it can evict only excess portion that is used by storage beyond its
+ 	       3 GB limit. 
+
+	3. User Memory (1 - spark.memory.fraction = 0.4) => 4 GB
+		-> Used for user code (Python/Scala/Java etc)
+
+
+  RDD Transformations
+  -------------------
+   => Transformations return a RDD.
+   => Does not cause execution.
+
+
+  1. map		P: U -> V
+			Transforms each input object to corresponding output object	
+			input RDD: N objects, output RDD: N objects		
+
+		rdd2 = rddFile.map( lambda x: x.split(" ") )
+
+
+  2. filter		P: U -> Boolean
+			Only those objects for which the function returns True will be there in the output
+			input RDD: N objects, output RDD: <= N objects	
+
+		rdd2 = rdd1.filter(lambda x: x > 10)
+
+  
+  3. glom		P: None
+			Returns a list object for every partition with all the elements of the partition
+			input RDD: N objects, output RDD: equal to number of partitions
+
+	rdd1			rdd2 = rdd1.glom()
+
+	P0: 3,2,1,4,7  -> glom -> P0: [3,2,1,4,7]
+	P1: 6,0,7,1,1  -> glom -> P1: [6,0,7,1,1]
+	P2: 5,1,3,2,4  -> glom -> P2: [5,1,3,2,4]
+
+	rdd1.count() = 15 (int)   rdd2.count() = 3 (list)
+
+  4. flatMap		P: U -> Iterable[V]
+			Flattens all the elements of the Iterables produced by the function
+			input RDD: N objects, output RDD: >= N object
+
+		rddWords = rddFile.flatMap(lambda x: x.split(" "))
+
+
+  5. mapPartitions	P: Iterable[U] -> Iterable[V]
+			Apply the transformation on the entire partition to produce the corresponding
+			output partition.
+
+	rdd1		rdd2 = rdd1.mapPartitions(lambda p : [sum(p)] )
+
+	P0: 3,2,1,4,7  -> mapPartitions -> P0: 17
+	P1: 6,0,7,1,1  -> mapPartitions -> P1: 15
+	P2: 5,1,3,2,4  -> mapPartitions -> P2: 15
+
+	rdd1.mapPartitions(lambda a: map(lambda x: x*10, a) ).glom().collect()
+
+
+  6. mapPartitionsWithIndex  	P: Int, Iterable[U] -> Iterable[V]
+			  Similar to mapPartitions, but you get partition index as an additional parameter.
+
+		rdd1.mapPartitionsWithIndex(lambda i, p : [(i, sum(p))] ).collect()
+		rdd1.mapPartitionsWithIndex(lambda i, p : map(lambda x: (i, x), p)).filter(lambda x: x[0] == 1).map(lambda x: x[1]).collect()
+
+   
+  7. distinct			P: None, Optional: numPartitions
+				Returns distinct objects of the RDD
+
+		rddWords.distinct().collect()
+		rddWords.distinct(3).collect()
+
+        Types of RDDs
+        -------------
+
+	=> Generic RDDs: RDD[U]
+              Pair RDDs: RDD[(K, V)]
+
+
+  8. mapValues		P: U -> V
+			Applied only on Pair RDDs
+			Transforms the valur part (only) of the Pairs by applying the function
+			input RDD: N objects, output RDD: N object
+
+		rdd4.mapValues(list).collect() 
+
+  9. sortBy		 P: U -> V,  Optional: ascending (True/False), numPartitions
+			 Sorts the RDD objects based on the function output.
+			 input RDD: N objects, output RDD: N object
+
+		rdd1.sortBy(lambda x: x%5).glom().collect()
+		rdd1.sortBy(lambda x: x%5, False).glom().collect()
+		rdd1.sortBy(lambda x: x%5, True, 5).glom().collect()
+
+  10. groupBy		  P: U -> V    Optional: numPartitions
+			  Will return a Pair RDD where
+				key: unique values of the function output
+				value: Objects that produced the key - ResultIterable
+			
+		rddWc = sc.textFile("E:\\Spark\\wordcount.txt", 3) \
+          		.flatMap(lambda x: x.split(" ")) \
+          		.groupBy(lambda x: x) \
+          		.mapValues(len) \
+          		.sortBy(lambda x: x[1], False, 1)
+
+  11. randomSplit	  P: List of weights (eg: [0.6, 0.4, 0.4])
+			  Returns a list of RDDs split approximatly in the specified ratios randomly.
+
+  
+  12. repartition	  P: numPartitions
+			  Returns an RDD with specified number of partitions
+			  Can increase or decrease the number of partitions
+			  Use global shuffling	  
+
+
+  13. coalesce		  P: numPartitions
+			  Returns an RDD with specified number of partitions
+			  Can only decrease the number of partitions
+			  Uses partition-merging
+
+    Recommendations
+    ---------------
+     => Size of the partition should be 100 MB to 1 GB (ideal: 128 MB) 
+     => The number of partitions should be a multiple of number of cores 
+     => If the number of partitions is close to but less than 2000, bump it up to 2000.
+     => Number of CPU cores per executor should be 5
+
+
+  14. union, intersection, subtract, cartesian
+   
+	Let us say we have rdd1 with M partitions & rdd2 with N partitions.
+
+	   command				partitions & type
+           ------------------------------------------------------
+	   rdd1.union(rdd2)			M + N, narrow
+	   rdd1.intersection(rdd2)		M + N, wide
+	   rdd1.subtract(rdd2)			M + N, wide
+	   rdd1.cartesian(rdd2)			M * N, wide
+   
+ 
+  15. partitionBy       P: numPartitions, Optional: partitioning-function  (default: hash)
+			Applied only on pair RDDs
+			Partitioning is performed based on the 'key'
+
+	 transactions = [
+    	 {'name': 'Raju', 'amount': 100, 'city': 'Chennai'},
+    	 {'name': 'Mahesh', 'amount': 15, 'city': 'Hyderabad'},    
+   	 {'name': 'Keertana', 'amount': 105, 'city': 'Vijayawada'},
+    	 {'name': 'Madhu', 'amount': 51, 'city': 'Hyderabad'},
+    	 {'name': 'Revati', 'amount': 200, 'city': 'Chennai'},
+   	 {'name': 'Amrita', 'amount': 75, 'city': 'Pune'},
+   	 {'name': 'Aditya', 'amount': 175, 'city': 'Bangalore'},
+    	 {'name': 'Keertana', 'amount': 105, 'city': 'Pune'},
+    	 {'name': 'Keertana', 'amount': 105, 'city': 'Vijayawada'},
+    	 {'name': 'Keertana', 'amount': 105, 'city': 'Vijayawada'}]
+
+	rdd1 = sc.parallelize(transactions) \
+         	.map(lambda d: (d['city'], d))
+         
+	rdd1.glom().collect()  
+
+	def custom_partitioner(city): 
+    		if (city == 'Chennai'):
+        		return 0;
+    		elif (city == 'Hyderabad'):
+        		return 1;
+    		elif (city == 'Vijayawada'):
+        		return 1;
+    		elif (city == 'Pune'):
+        		return 2;
+    		else:
+        		return 3; 
+
+	rdd2 = rdd1.partitionBy(4, custom_partitioner)
+
+  
+  ..ByKey Transformations
+  -----------------------
+	-> Wide transformations
+	-> Applied only to PairRDD
+
+  16. sortByKey		P: None, Optional: ascending (True/False), numPartitions
+			Sorts the objects based on the key.
+
+		rdd2.sortByKey().glom().collect()
+		rdd2.sortByKey(False).glom().collect()
+		rdd2.sortByKey(False, 4).glom().collect()
+
+
+  17. groupByKey	P: None, Optional: numPartitions
+			Returns a PairRDD where:
+			  key: unique-key
+			  value: Grouped values.
+
+			WARNING: Avoid groupByKey.	
+
+		rddWc = sc.textFile("E:\\Spark\\wordcount.txt", 3) \
+          		.flatMap(lambda x: x.split(" ")) \
+          		.map(lambda x: (x, 1)) \
+          		.groupByKey() \
+          		.mapValues(sum) \
+          		.sortBy(lambda x: x[1], False, 1)
+
+    18. reduceByKey	P: (U, U) -> U, Optional: numPartitions
+			Reduce values of each unique first for each partition and then across the
+			outputs of partitions.
+
+		wordcount = text_file.flatMap(lambda line: line.split(" "))  \
+                		.map(lambda word: (word, 1)) \
+                		.reduceByKey(lambda a, b: a + b, 1)
+
+    19. aggregateByKey		P: zero-value, seq-function, comb-function;  Optional: numPartitions
+
+				Is used to aggregate all the values of each unique key to a type
+				different that the values of (k,v) pairs.		
+				-> Applied on only pair RDDs.
+
+		Three parameters:
+
+		1. zero-value : Is the initial value of the type of final output.
+
+		2. sequence-function: Merges all the values of each unique key with the zero-value
+				      This is applied to every partition
+
+		3. combine-function: Reduces all the different aggregated values of each unique-key
+				     across partitions. 
+
+		Fourth optional parameter:  numPartitions.
+
+		student_rdd = sc.parallelize([
+  			("Aditya", "Maths", 83), ("Aditya", "Physics", 74), ("Aditya", "Chemistry", 91), ("Aditya", "English", 82), 
+  			("Amrita", "Maths", 69), ("Amrita", "Physics", 62), ("Amrita", "Chemistry", 97), ("Amrita", "English", 80), 
+  			("Pranav", "Maths", 78), ("Pranav", "Physics", 73), ("Pranav", "Chemistry", 68), ("Pranav", "English", 87), 
+  			("Keerthana", "Maths", 87), ("Keerthana", "Physics", 93), ("Keerthana", "Chemistry", 91), ("Keerthana", "English", 74), 
+  			("Harsha", "Maths", 56), ("Harsha", "Physics", 65), ("Harsha", "Chemistry", 71), ("Harsha", "English", 68), 
+  			("Vidya", "Maths", 86), ("Vidya", "Physics", 62), ("Vidya", "Chemistry", 75), ("Vidya", "English", 83), 
+  			("Komala", "Maths", 63), ("Komala", "Physics", 69), ("Komala", "Chemistry", 64), ("Komala", "English", 60)], 3)
+ 
+		student_rdd.collect()
+
+		output_rdd = student_rdd.map(lambda t : (t[0], t[2])) \
+              		.aggregateByKey( (0,0),
+                              lambda z, v: (z[0] + v, z[1] + 1),
+                              lambda a, b: (a[0] + b[0], a[1] + b[1]),
+                              2) \
+              		.mapValues(lambda x: x[0]/x[1])
+
+    20. joins => join, leftOuterJoin, rightOuterJoin, fullOuterJoin
+
+		RDD[(K, V)].join( RDD[(K, W) ) => RDD[(K, (V, W))]
+
+		join = names1.join(names2)   #inner Join
+		print( join.collect() )
+
+		leftOuterJoin = names1.leftOuterJoin(names2)
+		print( leftOuterJoin.collect() )
+
+		rightOuterJoin = names1.rightOuterJoin(names2)
+		print( rightOuterJoin.collect() )
+
+		fullOuterJoin = names1.fullOuterJoin(names2)
+		print( fullOuterJoin.collect() )
+
+    21. cogroup			Is used when you want to join RDDs with duplicate keys 
+				and want unique keys in the output RDD
+
+				groupByKey (on each RDD) => fullOuterJoin
+
+		[('key1', 10), ('key2', 12), ('key1', 7), ('key2', 6), ('key3', 6)]
+		=> (key1, [10, 7]) (key2, [12, 6]) (key3, [6])
+
+
+		[('key1', 5), ('key2', 4), ('key2', 7), ('key1', 17), ('key4', 17)]
+		=> (key1, [5, 17]) (key2, [4,7]) (key4, [17])
+
+		cogroup => (key1, ([10, 7], [5, 17])) (key2, ([5, 17], [4,7])) (key3, ([6], [])) (key4, ([], [17]))
+
+		
+   Use-Case
+   --------
+	From cars.tsv dataset, find the average-weight of all models of each make of American origin cars
+	-> Arrange the data in the descending order of average weight
+	-> Save the output in a single text file.
+
+	Please try it yourself
+
+
+  RDD Actions
+  ===========
+
+   1. collect
+
+   2. count
+
+   3. saveAsTextFile
+
+   4. 4. reduce		P: (U, U) -> U
+			Reduces the entire RDD to one value of the same type by iterativly applying the
+			function first at each partition and then on the outputs of each partition.
+		rdd1			
+
+		P0: 1,2,1,3,5,6,1 -> reduce ->  -17 => 4
+		P1: 2,3,1,4,5,7,1 -> reduce ->  -19
+		P2: 9,5,3,2,1,0,0 -> reduce ->  -2 
+	
+		rdd1.reduce( lambda x, y : x - y ) = 4
+   
+		rddWc.reduce(lambda a, b: (a[0] + "," + b[0], a[1] + b[1]) )
+
+   5. aggregate		
+	
+		Three Parameters:
+
+		1. zero-value  : initial value of the type of the final output
+
+		2. Sequence-function : is a function that is used to merge all the values
+		   of each parititon with the zero-value. This function is applied for each
+		   partition (narrow). 
+
+               3. Combine-function : Is a reduce function that reduces all the values per 
+	          partition produced by sequence function into one final value of the type
+                  of the zero-value.
+
+
+		rdd1.aggregate( (0,0), 
+				lambda z,e: (z[0] + e, z[1] + 1), 
+				lambda a,b: (a[0]+b[0], a[1]+b[1]) )
+
+		rdd1.aggregate( (0,0,0),  	
+				lambda z,v: (z[0]+v, z[1]+1, max(z[2],v)),  
+				lambda a,b: (a[0]+b[0], a[1]+b[1], max(a[2],b[2])))
+
+   6. first
+
+   7. take(n)
+
+   8. takeOrdered(n)
+
+		rdd1.takeOrdered(20)
+		rddWords.takeOrdered(30, len)
+
+
+   9. takeSample	=> rdd1.takeSample(withReplacement(True/False), n)
+			   rdd1.takeSample(True, 10)
+
+		  rdd1.takeSample(True, 10)		-> withReplacement sampling
+		  rdd1.takeSample(True, 10, 345)	-> withReplacement sampling with seed
+		  rdd1.takeSample(False, 100, 645)	-> withOutReplacement sampling with seed
+
+  10. countByValue
+
+  11. countByKey
+
+  12. foreach	=> does not return anything
+		   runs a function on all the objects of the RDD.
+
+		rddWc.foreach(lambda p: print("Key: {0}, Value:{1}".format(p[0], p[1])))
+
+  13. saveAsSequenceFile
+    
+
+
+  
+
+
+
+
+     
+
+
+
+
+
+          
+    
+
+
+
+
+
+
+
