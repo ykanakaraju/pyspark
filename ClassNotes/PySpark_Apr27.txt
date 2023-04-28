@@ -9,7 +9,6 @@
    Spark SQL
 	-> DataFrame Operations
 	-> Integrations - RDBMS & Hive
-	-> Spark Optimizations & Tuning
    Spark Streaming
 	-> Structured Streaming
 	
