@@ -74,13 +74,30 @@
   Spark Architecture
   ------------------
    
-   1. Cluster Manager
+	1. Cluster Manager
+		-> Jobs are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
 
-   2. Driver
+	2. Driver
+		-> Master process
+		-> Runs the SparkContext object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
 
-   3. SparkContext
+		Deploy Modes:
+		1. Client : default, driver runs on the client. 
+		2. Cluster : driver runs on one of the nodes on the cluster.
 
-   4. Executor  
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> receives the tasks from the Driver
+		-> all tasks runs the same execution code but on different partitions of the data
+		-> the status of tasks are reported to the driver. 
   
 	
   RDD (Resilient Distributed Dataset)
