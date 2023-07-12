@@ -1,0 +1,193 @@
+
+  Agenda (PySpark)
+  --------------------
+  1. Python Crash Course - Basics of Python
+  2. Spark - Basics & Architecture
+  3. Spark APIs
+  4. Spark Core - RDD API - Introduction & Basics
+  5. Spark SQL in details
+	Spark SQL Transformations
+	Spark SQL Integrations with RDBMS & Hive
+
+ ------------------------------------------------------
+ 
+  Course Materials
+  ----------------
+	-> PDF Presentations
+	-> Code Modules
+	-> Class Notes
+	-> https://github.com/ykanakaraju/pyspark
+	
+   
+  Installing Python Anaconda Distribution
+  ---------------------------------------
+	URL: https://www.anaconda.com/download
+	https://www.anaconda.com/download#downloads
+
+	Click on Download link
+	Run the msi installer.
+
+ 
+
+  Spark - Basics & Architecture
+  -----------------------------
+   
+   Spark is a distributed computing framework for big data analytics.
+
+     	-> Spark is written using Scala programming language
+
+	-> Spark is an in-memory distributed computing framework
+
+		Spark can persist intermediate partitions in-memory and subsequent tasks
+		can directly process these stored partitions to advance the computations. 
+
+        -> Spark is a unified framework.
+		
+		Spark provides a consistant set of APIs for processing different analytical
+		workloads based on the same execution engine.
+
+
+		Spark Core API (RDD)	-> Low level API for unstrauctured data processing
+		Spark SQL (DataFrames)  -> Used for structured batch analytics
+		Spark Streaming		-> Used for real-time data analytics
+		Spark MLLib		-> Predictive analytics using Machine Learning
+		Spark GraphX		-> Graph parallel computations.
+
+	-> Spark is a polyglot		
+		-> Supports Scala, Java, Python and R programming language.
+
+	-> Spark can run on multiple clusters
+		-> Local, Standalone Scheduler, YARN, Mesos, Kubernetes
+           
+
+   Spark Architecture
+   ------------------
+
+    	1. Cluster Manager
+		-> Jobs are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
+
+	2. Driver
+		-> Master process
+		-> Runs the SparkContext object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
+
+		Deploy Modes:
+		1. Client  : default, driver runs on the client. 
+		2. Cluster : driver runs on one of the nodes on the cluster.
+
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> receives the tasks from the Driver
+		-> all tasks runs the same execution code but on different partitions of the data
+		-> the status of tasks are reported to the driver.
+
+
+
+   RDD (Resilient Distributed Dataset)
+   -----------------------------------
+
+	-> RDD is the fundamental data abstraction of Spark Core API
+	-> RDDs are Collection of distributed in-memory partitions
+	-> RDDs have to components
+		RDD Loagical plan -> RDD Lineage DAG
+		RDD Data	  -> Collection of in-memory partitions
+
+
+  Creating RDDs
+  -------------
+
+
+
+  RDD Operations
+  --------------
+
+
+  RDD Lineage DAG
+  ----------------
+		
+
+
+
+
+
+
+
+
+
+
+
+	
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+   
+
+
+
+
+
+
+
