@@ -1,0 +1,248 @@
+
+  PySpark Curriculum
+  ---------------------------------------	
+    Spark Basics & Architecture
+    Spark Core Basics (RDD)
+    Spark Submit Command
+    Spark Shared Variables
+    Spark SQL DataFrame Operations
+    Spark SQL Window Functions
+    Spark SQL with JDBC/RDBMS
+    Spark SQL with Hive
+    Spark Structured Streaming
+
+  PySpark on AWS Curriculum
+  ----------------------------------------
+     AWS Lambda & AWS CloudWatch
+     (Integrating with with SNS, S3 & DynamoDB)
+     AWS EMR
+     (Cluster provisioning and running PySpark using Step Execution & Spark Submit) 
+     AWS Glue & AWS Athena
+     (Crawlers, Jobs, Workflows & ETL using PySpark)
+     AWS Step Functions Basics
+     Case-Study: Integrating AWS services
+       -> Integrating Lambda, Glue & PySpark
+
+   Pre-requisites
+   --------------
+	=> Python
+	=> Basics of AWS - IAM, S3 etc.
+  
+  Materials
+  ---------
+        => PDF Presentations
+	=> Code Module
+	=> Class Notes Files
+	=> GitHub: https://github.com/ykanakaraju/pyspark
+
+  
+  Spark
+  -----
+
+     -> Spark is a framework we use for big data analytics
+
+     -> Spark is an in-memory distributed computing framework
+
+     -> Spark is written in SCALA programming language
+
+	
+	   -> Spark is 100x times faster than MapReduce using 100% in-memory computation
+	   -> Spark is 6 to 7 times faster than MapReduce even with disk based computation.
+
+     	   Computing Cluster :  A collection of nodes whose cumulative resources can be used to distributed your stores
+                         	and processing. 
+
+     -> Spark is a unified framework.
+	
+         -> Spark provides a consistent set of APIs based on the same execution engine to process different analytical workloads.
+
+	  Spark APIs
+	  -----------
+
+		1. Spark Core API    	-> Low level API, RDD API. Used for unstructured data processing
+		2. Spark SQL		-> Structured data process
+		3. Spark Streaming      -> Spark Streaming (legacy) and Structured Streaming (current)
+		4. Spark MLlib		-> Machine learning workloads
+		5. Spark GraphX		-> Graph Parallel computations.
+
+
+     -> Spark is a polyglot
+	  -> Spark apps can be written using Scala, Java, Python and R 
+
+     -> Spark applications can run on mutiple cluster manager
+	   -> local, spark standalone, YARN, Mesos, Kubernetes 
+	
+
+
+   Getting strated with Spark
+   --------------------------
+
+	1. Using vLab provided to you.
+
+	2. Installing Spark on your personal machine. 
+	
+		-> Make sure to install Anaconda Distibution (such Anaconda Navigator)
+		-> Make sure you are running Java 8 or above (JDK 1.8 or above)
+		-> Open Anaconda Command Prompt and install pyspark
+			pip install pyspark  
+
+		-> If pip is not working, you can follow the instructions given in the shared document.
+
+		   https://github.com/ykanakaraju/pyspark/blob/master/Pyspark-JupyterNotebooks-Windows-Setup.pdf
+
+
+	3. Signup to Databricks Community Edition. 
+
+		Signup: https://www.databricks.com/try-databricks
+		-> Click on "Continue with Community Edition" link (Do not click on Continue) in the second screen. 
+
+
+    Spark Architecture
+    -------------------
+
+	1. Cluster Manager
+		-> Jobs are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
+
+	2. Driver
+		-> Master process
+		-> Runs the SparkContext object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
+
+		Deploy Modes:
+		1. Client  : default, driver runs on the client. 
+		2. Cluster : driver runs on one of the nodes on the cluster.
+
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> receives the tasks from the Driver
+		-> all tasks runs the same execution code but on different partitions of the data
+		-> the status of tasks are reported to the driver.
+
+
+   
+   RDD (Resilient Distributed Dataset)
+   -----------------------------------
+
+	-> Is a collection of distributed in-memory partitions.
+		-> Each partition is a collection of objects (of some type)
+   
+
+   Creating RDDs
+   -------------
+
+    Three ways to create an RDD:
+
+	1. From some external data sources such as text files.
+
+		rdd1 = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+
+	 	default number of partitions => sc.defaultMinPartitions = 2, if cores >= 2, else 1.
+ 
+
+	2. From programmatic data
+
+		rdd2 = sc.parallelize(range(1, 100), 3)
+
+		default number of partitions => sc.defaultParallelism = number of cores allocated
+
+
+	3. To be discussed
+                ....
+		
+
+
+   RDD Operations
+   --------------
+
+
+   RDD Lineage DAGs
+   ----------------
+
+
+
+
+
+	
+
+
+    
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		 
+
+
+
+
+
+
+  
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
