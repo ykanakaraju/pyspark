@@ -1,0 +1,164 @@
+ 
+  Agenda (PySpark)
+  -----------------
+   Spark - Basics & Architecture
+   Spark Core API
+	-> RDD - Transformations & Actions
+	-> Spark shared variables
+   Spark Submit command
+   Spark SQL
+	-> DataFrame Operations
+	-> Integrations - RDBMS & Hive
+   Spark Streaming
+	-> Structured Streaming
+
+
+  Materials
+  ---------
+	=> PDF Presentations
+	=> Code Modules 
+	=> Class Notes 
+        => Github: https://github.com/ykanakaraju/pyspark
+
+ =====================================================================
+
+
+    Pre-requisites:
+    ----------------
+        => SQL knowledge
+        => Python language
+
+
+   Spark
+   -----
+	-> Spark is written in Scala programming language
+
+	-> Is a framework to be used for Big Data Analytics
+
+	-> Spark is a unified in-memory distributed computing (aka. cluster computing) framework 
+
+	in-memory => ability of spark to persist intermediate results in memory (RAM) and subsequent
+                     tasks can directly work on these persisted partitions. 
+
+
+   Spark unified stack
+   -------------------
+
+	Spark provides a consistent set of APIs working on the same execution engine to process different
+	analytics work loads.
+
+	Spark Core API		=> Low-level (RDD) API for unstructured data processing
+	Spark SQL		=> batch processing of Structured data.
+	Spark Streaming		=> stream data processing (real time)
+	Spark MLLib		=> predictive analytics (machine learning)
+	Spark GraphX		=> Graph parallel computations. 
+
+
+   Spark runs on multiple cluster managers
+	-> local, spark standalone scheduler, YARN, Mesos, Kubenetes. 
+
+   Spark is a polyglot
+	-> Spark applications can be written in Scala, Java, Python, R
+
+
+    
+   Getting started with Spark
+   --------------------------
+
+   1. Databricks Community Edition
+
+	 Signup: https://www.databricks.com/try-databricks#account
+		-> Fill in the details with valid email address
+		-> Next screen click on 'Get started with Community Edition' (NOT Continue button)
+
+	 Log-in: https://community.cloud.databricks.com/login.html
+
+
+   2. Setting up PySpark development environment on your local machine.
+
+	-> Make sure you install Anaconda distribution first.
+		-> https://www.anaconda.com/download
+	-> Follow the instructions given in the shared document
+	        https://github.com/ykanakaraju/pyspark/blob/master/Pyspark-JupyterNotebooks-Windows-Setup.pdf
+
+ 
+  Spark Architecture
+  ------------------
+
+
+	1. Cluster Manager
+		-> Jobs are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
+
+	2. Driver
+		-> Master process
+		-> Runs the SparkContext object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
+
+		Deploy Modes:
+		1. Client : default, driver runs on the client. 
+		2. Cluster : driver runs on one of the nodes on the cluster.
+
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> receives the tasks from the Driver
+		-> all tasks runs the same execution code but on different partitions of the data
+		-> the status of tasks are reported to the driver. 
+
+
+
+
+   RDD (Resilient distributed dataset)
+   -----------------------------------
+
+	-> The fundamental in-memory data abstraction of Spark Core API
+
+	-> RDD is a group of ditributed in-memory partitions
+		-> A partition is a collection of objects of any type. 
+
+        -> RDD are immutable
+
+	-> RDD are lazily evaluated
+		==> to be discussed ...
+      
+
+
+
+  
+
+
+
+
+  
+
+
+   
+
+
+	
+
+   
+
+	
+
+	
+
+
+   
+	
+
+   
+
+   
+
+
+
+
+
+
