@@ -1,0 +1,322 @@
+ 
+  Agenda (PySpark)
+  -----------------
+   Spark - Basics & Architecture
+   Spark Core API
+	-> RDD - Transformations & Actions
+	-> Spark shared variables
+   Spark Submit command
+   Spark SQL
+	-> DataFrame Operations
+	-> Integrations - RDBMS & Hive
+   Spark Streaming
+	-> Structured Streaming
+
+
+  Materials
+  ---------
+	=> PDF Presentations
+	=> Code Modules 
+	=> Class Notes 
+        => Github: https://github.com/ykanakaraju/pyspark
+
+ =====================================================================
+
+
+    Pre-requisites:
+    ----------------
+        => SQL knowledge
+        => Python language
+
+
+   Spark
+   -----
+	-> Spark is written in Scala programming language
+
+	-> Is a framework to be used for Big Data Analytics
+
+	-> Spark is a unified in-memory distributed computing (aka. cluster computing) framework 
+
+	in-memory => ability of spark to persist intermediate results in memory (RAM) and subsequent
+                     tasks can directly work on these persisted partitions. 
+
+
+   Spark unified stack
+   -------------------
+
+	Spark provides a consistent set of APIs working on the same execution engine to process different
+	analytics work loads.
+
+	Spark Core API		=> Low-level (RDD) API for unstructured data processing
+	Spark SQL		=> batch processing of Structured data.
+	Spark Streaming		=> stream data processing (real time)
+	Spark MLLib		=> predictive analytics (machine learning)
+	Spark GraphX		=> Graph parallel computations. 
+
+
+   Spark runs on multiple cluster managers
+	-> local, spark standalone scheduler, YARN, Mesos, Kubenetes. 
+
+
+   Spark is a polyglot
+	-> Spark applications can be written in Scala, Java, Python, R
+
+
+    
+   Getting started with Spark
+   --------------------------
+
+   1. Databricks Community Edition
+
+	 Signup: https://www.databricks.com/try-databricks#account
+		-> Fill in the details with valid email address
+		-> Next screen click on 'Get started with Community Edition' (NOT Continue button)
+
+	 Log-in: https://community.cloud.databricks.com/login.html
+
+
+   2. Setting up PySpark development environment on your local machine.
+
+	-> Make sure you install Anaconda distribution first.
+		-> https://www.anaconda.com/download
+	-> Follow the instructions given in the shared document
+	        https://github.com/ykanakaraju/pyspark/blob/master/Pyspark-JupyterNotebooks-Windows-Setup.pdf
+
+ 
+  Spark Architecture
+  ------------------
+
+
+	1. Cluster Manager
+		-> Jobs are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
+
+	2. Driver
+		-> Master process
+		-> Runs the SparkContext object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
+
+		Deploy Modes:
+		1. Client : default, driver runs on the client. 
+		2. Cluster : driver runs on one of the nodes on the cluster.
+
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> receives the tasks from the Driver
+		-> all tasks runs the same execution code but on different partitions of the data
+		-> the status of tasks are reported to the driver. 
+
+
+
+   RDD (Resilient Distributed Dataset)
+   -----------------------------------
+
+	-> The fundamental in-memory data abstraction of Spark Core API
+
+	-> RDD is a group of ditributed in-memory partitions.
+		-> A partition is a collection of objects of any type. 
+
+        -> RDD are immutable
+
+	-> RDD are lazily evaluated
+		-> Transformations does not cause execution
+		-> Actions cause execution. 
+		
+		
+      
+
+   Creating RDDs
+   -------------
+
+	Three ways:
+
+	1. Create an RDD from external files.
+
+		rddFile = sc.textFile(<dataPath>, numPartitions)
+		rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+
+		default Number of partitions: sc.defaultMinPartitions  (1, if cores = 1, otherwise 2)
+
+	2. Create an RDD from programmatic data
+
+		rdd1 = sc.parallelize([2,3,1,2,4,5,3,5,6,7,6,8,9], 3)
+		default Number of partitions: sc.defaultParallelism (= the number of cores)
+
+	3. By applying transformations on existing RDDs
+
+		rdd2 = rdd1.map(lambda x: x*10)
+		
+
+   RDD Operations
+   --------------
+
+    Two types of operations:
+
+	1. Transformations
+		-> Create an RDD
+		-> Does not cause executions. Does not start jobs on the cluster.
+		-> Only lineage DAGs are maintained by the driver
+
+	2. Actions
+		-> Executes the RDD
+		-> Creates a physical plan and sends jobs to the cluster.
+
+
+   RDD Lineage DAG
+   ---------------
+
+   RDD Lineage DAG is a logical plan maintained by the driver
+   Containes all hierarchical dependencies all the way from the very first RDD
+   Transformations cause the creation of RDD DAGs.  
+
+	rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+	    rddFile Lineage DAG: (4) rddFile sc.textFile on wordcount.txt
+
+	rddWords = rddFile.flatMap(lambda x: x.split())
+	   rddWords Lineage DAG: (4) rddWords -> rddFile.flatMap -> sc.textFile on wordcount.txt
+
+	rddPairs = rddWords.map(lambda x: (x, 1))
+	   rddPairs Lineage DAG: (4) rddPairs -> rddWords.map -> rddFile.flatMap -> sc.textFile on wordcount.txt
+
+	rddWc = rddPairs.reduceByKey(lambda x, y: x + y)
+	  rddWc Lineage DAG: (4) rddWc -> rddPairs.reduceByKey -> rddWords.map -> rddFile.flatMap -> sc.textFile
+
+
+  
+   Spark application execution flow
+   --------------------------------
+
+	Application (SC) 
+	    => Jobs (actions) 
+	       => Stages (based on wide transformations) 
+                  => Tasks (base on numPartitions) => Transformations. 
+
+
+
+   Types of Transformations
+   ------------------------
+
+	Two types:
+
+	1. Narrow Transformations
+
+		-> Narrow transformations are those, where the computation of each partition depends ONLY
+		  on its input partition.
+		-> There is no shuffling of data.
+		-> Simple and efficient
+
+
+	2. Wide Transformations
+
+		-> In wide transformations, the computation of a single partition depends on all/many
+		  partitions of its input RDD.
+		-> Data shuffle across partitions will happen.
+		-> Complex and expensive
+
+
+
+	
+
+   RDD Transformations
+   -------------------
+   
+   1. map 		P: U -> V
+			object to object transformation
+			input RDD: N objects, output RDD: N objects
+	
+	rddFile.map(lambda x: x.split(" ") ).collect()
+
+
+   2. filter		P: U -> Boolean	
+			Filters the objects based on the function	
+			input RDD: N objects, output RDD: <= N objects
+
+	rddFile.filter(lambda x: len(x) > 51).collect()
+
+
+  3. glom		P: None
+			Returns one list object per partition
+
+		rdd1		    rdd2 = rdd1.glom()	
+		P0: 2,3,1,4,6  -> glom -> P0: [2,3,1,4,6]
+		P1: 5,6,7,4,3  -> glom -> P1: [5,6,7,4,3]
+		P2: 8,9,0,4,7  -> glom -> P2: [8,9,0,4,7]
+	
+		rdd1.glom().map(sum).collect()
+
+
+  4. flatMap           	P: U -> Iterable[V] 
+			flatmap flattens the iterables produced by the function 
+
+		rddWords = rddFile.flatMap(lambda x: x.split())
+
+
+  5. mapPartitions	P: Iterable[U] -> Iterable[V]
+			partition to partition transformation
+
+		rdd1.mapPartitions(lambda p: [ sum(p) ] ).glom().collect()
+		rdd1.mapPartitions(lambda p: map(lambda x: x*10, p) ).glom().collect()
+
+
+  6. mapPartitionsWithIndex	P: Int, Iterable[U] -> Iterable[V]
+			Similar to mapPartitions but we get partition-index as additional function input parameter.
+
+		rdd1.mapPartitionsWithIndex(lambda i, p : 
+		     map(lambda x: (i, x*10), p)).filter(lambda x: x[0] == 1).collect()
+
+
+  7. distinct		P: None, Optional: numPartition
+			Returns the distict objects of the RDD. 
+
+		rddWords.flatMap(lambda x: x).distinct().collect()	
+
+
+
+
+
+       
+
+
+
+
+
+     
+    
+
+
+
+
+
+  
+
+
+   
+
+
+	
+
+   
+
+	
+
+	
+
+
+   
+	
+
+   
+
+   
+
+
+
+
+
+
