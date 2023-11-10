@@ -1,6 +1,6 @@
 
-  Agenda (PySpark)
-  -----------------
+  Agenda (PySpark on Databricks)
+  ------------------------------
 
    Databricks - Basics
    Spark - Basics & Architecture 
@@ -102,24 +102,29 @@
 	
    -> RDD is the fundamental data abstraction of Spark Core
    -> RDD represents a collection of distributed in-memory partitions
+	 -> Partition is a collections of objects (of some type)
 
 
   Creating RDDs
   -------------
 	
-	Three ways:
+    Three ways:
 
 	1. Creating an RDD from external file
 
-
-		rdd1 = sc.textFile( <filePath>, n )
-		rdd1 = sc.textile("E:\\Spark\\wordcount.txt", 4)
+		rddFile = sc.textFile( <filePath>, n )
+		rddFile = sc.textile("E:\\Spark\\wordcount.txt", 4)
 
 
 	2. Creating an RDD from programmatic data
 
+		rdd1 = sc.parallelize(<some python collection>, n)
+		rdd1 = sc.parallelize([3,2,1,4,2,3,5,4,6,7,8,9,0,8,9,0,8,6,4,1,2,3,2,4,6,5,7,8,9,6,7,5], 3)
+
+
 	3. Creating an RDD by applying transformations on exiting RDD
 
+		rddWords = rddFile.flatMap(lambda x: x.split())
 
 
   RDD Operations
@@ -128,33 +133,104 @@
 
 	1. Transformations
 		-> Creates an RDD Lineage DAG
-
+		-> Does not cause execution
 
 	2. Actions
 		-> Executes an RDD and launchs a Job in the cluster
+		-> Produces some output
+		-> Converts logical plan (DAG) to a physical plan for execution. 
 
 
-
-  RDD Lineage DAG
+  RDD Lineage DAG   
   ---------------
+   (DAG: Directed Acyclic Graph)
+   -> Represents a logical plan on how to execute the RDD.
+   -> Lineage DAG stores the heirarchy of dependencies all the way from the very first RDD.
 
-   
+	rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+	Lineage DAG of rddFile => (4) rddFile -> sc.textFile on wordcount.txt
 
+	rddWords = rddFile.flatMap(lambda x: x.split())
+	Lineage DAG of rddWords => (4) rddWords -> rddFile.flatMap -> sc.textFile on wordcount.txt
 
+	rddPairs = rddWords.map(lambda x: (x, 1))
+	Lineage DAG of rddWords => (4) rddPairs -> rddWords.map -> rddFile.flatMap -> sc.textFile
 
-
-
-
-
-
+	rddWc = rddPairs.reduceByKey(lambda x, y: x + y)
+	Lineage DAG of rddWc => (4) rddWc -> rddPairs.reduceByKey -> rddWords.map -> rddFile.flatMap -> sc.textFile
   
 
 
+  RDD Execution Flow
+  ------------------
+
+	Application (ex: PySpark Shell or You App in Spyder/PyCharm)
+	|
+	|--> Jobs (Each action command launches one job)
+		|
+		|--> Stages (one or more stages per Job)
+			|
+			|--> Tasks (one task per partition of the RDD in that stage)
+				|
+				|--> Transformations (one or more transformations)
+				
 
 
+  Getting started with Databricks
+  -------------------------------
 
 
+	Signup to Databricks community edition
+	--------------------------------------
+	-> URL: https://www.databricks.com/try-databricks
+		-> Fill in the details with valid email address (Preferably personal email)
+		-> In the next page, click on "Get started with Community Edition" link
+		   (Do not click on 'Continue' button)
 
+
+	Databricks Storage
+        ------------------	
+	DBFS (Databricks File System) --> Upload your data into this
+		
+	  File access format: dbfs:/FileStore/flight-data
+			      /FileStore/flight-data
+
+	 FileStore => this is the folder into which you can upload user data.
+		
+
+   RDD Transformations
+   -------------------
+
+  1. map		P:  U -> V
+			Object to object transformation
+			Transforms each input object into an output object by applying the function
+			input RDD: N objects, output RDD: N objects
+
+		rddFile.map(lambda x: x.upper()).collect()
+
+
+  2. filter		P: U -> Boolean	
+			Filters the data to the output DataFrame based on the condition
+			input RDD: N objects, output RDD: < N objects
+
+		rdd1.filter(lambda x: x > 5).collect()
+
+
+  3. glom		P: None
+			Returns one list object per partition with the content of entire partition.
+
+	
+		rdd1			     rdd2 = rdd1.glom()
+
+		P0: 2,3,4,3,5,6,7 -> glom -> P0: [2,3,4,3,5,6,7]
+		P1: 4,6,7,0,5,1,2 -> glom -> P1: [4,6,7,0,5,1,2]
+		P2: 5,7,2,3,1,2,1 -> glom -> P2: [5,7,2,3,1,2,1]
+
+		rdd1.count() = 21 (int)		rdd2.count() = 3 (list)
+
+
+  4. mapPartitions   	P: Iterable[U] -> Iterable[V]
+			partition to partition transformation
 
 
 
