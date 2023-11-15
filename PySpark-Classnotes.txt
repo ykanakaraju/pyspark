@@ -44,8 +44,8 @@
 	-> Local, Spark Standalone, YARN, Mesos, Kubernetes
 
 
-    Unified framework
-    -----------------
+   Unified framework
+   -----------------
 	
       Spark provides a consistent set of API running on the same execution engine and using standard
       data abstractions for processing different analytical workloads. 
@@ -101,8 +101,20 @@
   -----------------------------------
 	
    -> RDD is the fundamental data abstraction of Spark Core
+
    -> RDD represents a collection of distributed in-memory partitions
 	 -> Partition is a collections of objects (of some type)
+
+   -> RDDs are lazily evaluated
+	-> Transformations does not cause execution. 
+	-> Actions trigger execution.
+
+   -> RDDs are immutable
+	-> We can not change the content of an RDD once created. 
+	-> We can only transform to other RDDs
+
+   -> RDDs are resilient
+	-> RDDs can recompute (missing) partitions at run time 
 
 
   Creating RDDs
@@ -115,16 +127,24 @@
 		rddFile = sc.textFile( <filePath>, n )
 		rddFile = sc.textile("E:\\Spark\\wordcount.txt", 4)
 
+		=> default number of partitions is as per the value of "sc.defaultMinPartitions"
+		=> "sc.defaultMinPartitions" = 2 if core >= 2, else 1
+
 
 	2. Creating an RDD from programmatic data
 
 		rdd1 = sc.parallelize(<some python collection>, n)
 		rdd1 = sc.parallelize([3,2,1,4,2,3,5,4,6,7,8,9,0,8,9,0,8,6,4,1,2,3,2,4,6,5,7,8,9,6,7,5], 3)
 
+		=> default number of partitions is as per the value of "sc.defaultParallelism"
+		=> "sc.defaultMinPartitions" = number of cores allocated to your application
+
 
 	3. Creating an RDD by applying transformations on exiting RDD
 
 		rddWords = rddFile.flatMap(lambda x: x.split())
+
+		-> By default the output RDD will have the same number of partitions as input partitions
 
 
   RDD Operations
@@ -172,34 +192,36 @@
 			|
 			|--> Tasks (one task per partition of the RDD in that stage)
 				|
-				|--> Transformations (one or more transformations)
-				
+				|--> Transformations (one or more transformations per task)				
 
 
   Getting started with Databricks
   -------------------------------
 
 
-	Signup to Databricks community edition
-	--------------------------------------
+    Signup to Databricks community edition
+    --------------------------------------
 	-> URL: https://www.databricks.com/try-databricks
 		-> Fill in the details with valid email address (Preferably personal email)
 		-> In the next page, click on "Get started with Community Edition" link
 		   (Do not click on 'Continue' button)
 
 
-	Databricks Storage
-        ------------------	
+    Databricks Storage
+    ------------------	
 	DBFS (Databricks File System) --> Upload your data into this
 		
-	  File access format: dbfs:/FileStore/flight-data
-			      /FileStore/flight-data
+	 File access format: dbfs:/FileStore/flight-data  or  /FileStore/flight-data
 
 	 FileStore => this is the folder into which you can upload user data.
+
+
+
+  
 		
 
-   RDD Transformations
-   -------------------
+  RDD Transformations
+  -------------------
 
   1. map		P:  U -> V
 			Object to object transformation
@@ -232,6 +254,45 @@
   4. mapPartitions   	P: Iterable[U] -> Iterable[V]
 			partition to partition transformation
 
+		rdd1.mapPartitions(lambda p: map(lambda x: x*10, p)).glom().collect()
+
+
+  5. flatMap		P: U -> Iterable[V]
+			flattens the output produced by the function
+
+		rddWords = rddFile.flatMap(lambda x: x.split())
+
+
+  Types of RDDs
+  -------------
+	
+	1. Generic RDDs  : RDD[U]
+	2. Pair RDDs : RDD[(K, V)]
+
+
+  6. mapValues		P: U -> V
+			Applied only on Pair RDD
+			Transforms only the 'value' part of the (K, V) pairs by applying the function
+			
+
+		rdd3 = rdd2.mapValues(lambda v: (v, v+10))
+		rdd3.collect()
+
+
+  7. distinct		P: None, Optional: numPartition
+			returns distinct objects of the RDD
+
+		rdd1.distinct().glom().collect()
+		rdd1.distinct(3).glom().collect()
+		rdd1.distinct(2).glom().collect()
+
+
+  8. sortBy		P: U -> V, Optional: ascending (True/False), numPartitions
+			Sorts the data of the RDD based on the function output
+
+		rddWords.sortBy(lambda x: len(x)).collect()
+		rddWords.sortBy(lambda x: len(x), False).collect()
+		rddWords.sortBy(lambda x: len(x), False, 3).collect()
 
 
 
@@ -239,10 +300,45 @@
 
 
 
+  RDD Persistence
+  ---------------
+	rdd1 = sc.textFile(....., 40)
+	rdd2 = rdd1.t2(..)
+	rdd3 = rdd1.t3(..)
+	rdd4 = rdd3.t4(..)
+	rdd5 = rdd3.t5(..)
+	rdd6 = rdd5.t6(..)
+	rdd6.persist( StorageLevel.DISK_ONLY )      --> instruction to spark to save rdd6 partitions.
+	rdd7 = rdd6.t7(..)
+
+	rdd6.collect()
+	   lineage DAG of rdd6: (40) rdd6 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+	   physical plan: [sc.textFile, t3, t5, t6] -> collected
+
+	rdd7.collect()
+	   lineage DAG of rdd7: (40) rdd7 -> rdd6.t7
+	   physical plan: [t7] -> collected
+
+	rdd6.unpersist()
 
 
+     Storage Levels
+     --------------
+	1. MEMORY_ONLY		-> default, Memory Serialized 1x Replicated
+	2. MEMORY_AND_DISK	-> Disk Memory Serialized 1x Replicated
+	3. DISK_ONLY		-> Disk Serialized 1x Replicated
+	4. MEMORY_ONLY_2	-> Memory Serialized 2x Replicated
+	5. MEMORY_AND_DISK_2    -> Disk Memory Serialized 2x Replicated
 
+    
+    Commands
+    --------
+	rdd1.cache()        			-> in-memory persistence
+	rdd1.persist(StorageLevel.DISK_ONLY)
 
+	rdd1.unpersist()
+	
+	
 
 
 
