@@ -216,10 +216,6 @@
 	 FileStore => this is the folder into which you can upload user data.
 
 
-
-  
-		
-
   RDD Transformations
   -------------------
 
@@ -295,7 +291,39 @@
 		rddWords.sortBy(lambda x: len(x), False, 3).collect()
 
 
+  9. groupBy		P: U -> V, Optional: numPartitions
+			Returns a Pair-RDD where:
+				key: Each unique value of the function output
+				value: ResultIterable. Grouped objectsof the RDD that produced the key
 
+
+
+  10. partitionBy	P: numPartitions, Optional: partition-function (defaut: hash)
+			Applied on Pair RDDs only
+
+  
+			
+  11. sortByKey		P: None, Optional: ascending (True/False), numPartitions
+			Applied on Pair RDDs only
+			Sorts based on the Key
+
+
+  12. groupByKey	P: None, Optional: numPartitions
+			Applied on Pair RDDs only
+			Returns a Pair RDD where:
+			  key: each unique key of the (K, V) pairs
+			  value: Results Iterable. Grouped values with the same key.
+
+  
+  13. reduceByKey	P: (U, U) -> U, Optional: numPartitions
+			Applied on Pair RDDs only
+			Reduces all the values of each unique key.
+
+
+  14. repartition	-- to be discussed	
+
+
+  15. coalesce          -- to be discussed	
 
 
 
@@ -337,25 +365,50 @@
 	rdd1.persist(StorageLevel.DISK_ONLY)
 
 	rdd1.unpersist()
-	
-	
+		
+  
+  RDD Actions
+  -----------
+
+   1. collect
+
+   2. count
+
+   3. saveAsTextFile
+
+   4. reduce		P: (U, U) => U
+			Reduces an entire RDD to one value of the same type.
+			In the first stage each partition is reduced and in the second stage the outputs
+			of all the partitions are further reduced by iterativly running the function.
+
+		rdd1
+		P0: 3,2,1,4,2,4,5 -> reduce -> 21 -> reduce -> 73
+		P1: 5,7,6,8,9,0,1 -> reduce -> 36
+		P2: 2,1,1,3,2,4,3 -> reduce -> 16
+
+		rdd1.reduce(lambda x, y: x + y) => 73
+
+  5. take
+
+  6. takeOrdered
+
+  7. takeSample
+
+  8. countByValue
+
+  9. countByKey
 
 
+  Use-Case
+  ---------
 
+   Dataset: https://github.com/ykanakaraju/pyspark/blob/master/data_git/cars.tsv
 
+   From cars.tsv file, get the average weight of all the models of each make of American origin cars
+	-> Arrange the data in the DESC order of average weight
+	-> Save the output in a single text file.
 
-
-
-
-
-
-
-
-
-
-
-
-
+  
 
 
 
