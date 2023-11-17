@@ -320,11 +320,18 @@
 			Reduces all the values of each unique key.
 
 
-  14. repartition	-- to be discussed	
+  14. repartition	P: numPartition
+			Is used to increase or decrease the number of partitions
+			Performs global shuffle
 
+		rddWords.repartition(3).glom().collect()
+		
 
-  15. coalesce          -- to be discussed	
+  15. coalesce		P: numPartition
+			Is used only to decrease the number of partitions
+			Performs partition merging
 
+		 rddWords.coalesce(2).glom().collect()	
 
 
 
@@ -409,14 +416,153 @@
 	-> Save the output in a single text file.
 
   
+  Closure
+  -------
+
+	In Spark, a closure constitutes all the variables and methods which must be visible for 
+        the executor to perform its computations on the RDD
+
+	-> Driver serializes the closure and a separate copy is sent to each executor. 
 
 
 
+        c = 0    # count the number of primes
+    
+	def f1(n):
+	   global c
+	   if is_prime(n):
+	      c += 1
+	   return n*2
+
+	def is_prime(n):
+	   return True if n is prime
+	   else return False
+
+	rdd1 = sc.parallelize( range(1, 4001), 4 )
+	rdd2 = rdd1.map(f1)
+
+	rdd2.collect()
+
+	print(c)      # 0
 
 
+    Limitatiton: You can not use local variables to implement global counter. 
+    Solution: Use Accumulator variable.
 
 
+  Shared Variables
+  ----------------
 
+   1. Accumulator Variable
+
+	-> Is a shared variable that is not part of the closure
+	-> Maintained by driver
+	-> All tasks can add to it using 'add' method.	
+	-> Only driver can read the value of accumulator. Tasks can only write to it.
+	-> Use accumulators to implement global counters. 
+
+
+	c = sc.accumulator(0)    # count the number of primes
+    
+	def f1(n):
+	   global c
+	   if is_prime(n):
+	      c.add(1)
+	   return n*2
+
+	def is_prime(n):
+	   return True if n is prime
+	   else return False
+
+	rdd1 = sc.parallelize( range(1, 4001), 4 )
+	rdd2 = rdd1.map(f1)
+
+	rdd2.collect()
+
+	print( c.value() )  
+
+
+   2. Broadcast Variable
   
+	-> Broadcast variable is a shared variable, hence, not a part of closure
+	-> Driver sends a copy of the broadcast variable to every executor (not to task)
+	-> All the tasks within that executor can read from the one copy (of the executor)
+	-> You can convert large immutable collections into broadcast variables. 	
+
+	bc = sc.broadcast({1: a, 2: b, 3: c, 4: d, 5: e, ........})     # 100 MB
+
+	def f1(n):
+           global bc 
+           return bc.value[n]
+
+	rdd1 = sc.parallelize([1,2,3,4,5,....], 4)
+	rdd2 = rdd1.map(f1)
+
+	rdd2.collect()
+	
+	
+  Spark-submit command
+  --------------------
+
+    -> Is a single command to submit any spark application (Python, Scala, Java, R) to any cluster
+       manager (local, spark standalone, YARN, Mesos, Kubernetes)
+
+	spark-submit [options] <app jar | python file | R file> [app arguments]
+
+	spark-submit --master local E:\PySpark\spark_core\examples\wordcount.py
+
+	spark-submit --master local E:\PySpark\spark_core\examples\wordcount_cmdargs.py sampletext.txt st_output 2
+
+
+  ===========================
+     Spark SQL
+  ===========================
+    
+    => This is the main API of Spark for data analysis/data engineering/data science
+	
+	-> Is a high-level API built on top of Spark Core.	
+	-> Spark Structured/Semi-structured data processing API
+
+
+   => Supported Formats:
+	
+	File Formats: Parquet (default), ORC, JSON, CSV (delimited text)
+	JDBC Format:  RDBMS, NoSQL Databases
+	HIve Format: Hive warehouse.
+
+
+   => SparkSession
+	
+	-> Represents a user-session inside an application
+	-> An application can contain multiple sessions.
+	-> SparkSession is the starting point of executions
+
+		application => SparkContext
+		session	=> SparkSession
+
+	In Databricks:
+		A cluster -> Represents an application
+		Notebooks -> Represents Session
+	
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
