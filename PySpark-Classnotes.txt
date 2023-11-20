@@ -526,9 +526,9 @@
 
    => Supported Formats:
 	
-	File Formats: Parquet (default), ORC, JSON, CSV (delimited text)
+	File Formats: Parquet (default), ORC, JSON, CSV (delimited text), Text
 	JDBC Format:  RDBMS, NoSQL Databases
-	HIve Format: Hive warehouse.
+	Hive Format:  Hive warehouse
 
 
    => SparkSession
@@ -542,13 +542,213 @@
 
 	In Databricks:
 		A cluster -> Represents an application
-		Notebooks -> Represents Session
+		Notebooks -> Represent Sessions (in the application)
 	
 
+		spark = SparkSession \
+			.builder \
+			.appName("Basic Dataframe Operations") \
+			.config("spark.master", "local[*]") \
+			.getOrCreate()    
 
 
+  
+   => DataFrame
+
+	-> Is the main data abstraction	
+
+	-> DataFrame represents a collection of in-memory partitions that are immutable and lazily evaluated
+	   -> each partition contains "Row" objects
+
+        -> DataFrame has two components
+
+		-> Data   : Row objects
+		-> Schema : StructType object
+
+		StructType(
+		    [
+			StructField('age', LongType(), True), 
+			StructField('gender', StringType(), True), 
+			StructField('name', StringType(), True), 
+			StructField('phone', StringType(), True), 
+			StructField('userid', LongType(), True)
+		    ]
+		)
+
+
+  
+   Basic Steps in Spark SQL 		
+   ------------------------
+	
+	1. Load/Read the data into a DataFrame	
+
+		df1 = spark.read.format("json").load("/FileStore/users.json")
+		df1 = spark.read.load("/FileStore/users.json", format="json")
+		df1 = spark.read.json("/FileStore/users.json")
+		
+		Applying schema
+		---------------
+		users_schema = StructType(
+		    [
+			StructField('age', LongType(), True), 
+			StructField('gender', StringType(), True), 
+			StructField('name', StringType(), True), 
+			StructField('phone', StringType(), True), 
+			StructField('userid', LongType(), True)
+		    ])
+
+		df1 = spark.read.schema(users_schema).json("/FileStore/users.json")
+
+
+	2. Transform the DataFrame using Transformations API or using SQL
+
+		Using Transformation methods
+		----------------------------
+		df2 = df1.select("userid", "name", "age", "gender", "phone") \
+        		.where("age is not null") \
+        		.orderBy("gender", "age") \
+        		.groupBy("gender", "age").count() \
+        		.limit(4)
+
+
+		Using SQL
+		---------
+		df1.createOrReplaceTempView("users")
+
+		df3 = spark.sql("""SELECT age, count(1) as count
+        			   FROM users
+        			   WHERE age IS NOT NULL
+        			   GROUP BY gender, age
+        			   ORDER BY gender, age
+        			   LIMIT 4""")
+		display(df3)	
+
+
+ 	3. Save/Write the DataFrame into a target location 
+	
+		df3.write.format("json").save("dbfs:/FileStore/output/json")
+		df3.write.save("dbfs:/FileStore/output/json", format="json")
+		df3.write.json("dbfs:/FileStore/output/json")
 
  
+  Save Modes
+  ----------
+	- Define what should happen when you are writing to an existing directory
+  		- ErrorIfExists (default)
+  		- Ignore
+  		- Append   (appends additional files to the existing directory)
+  		- Overwrite (overwrites old directory)
+
+
+	df3.write.mode("append").format("json").save("dbfs:/FileStore/output/json")
+	df3.write.mode("overwrite").format("json").save("dbfs:/FileStore/output/json")
+
+	df3.write.format("json").save("dbfs:/FileStore/output/json", mode="append")
+
+
+  LocalTempViews & GlobalTempViews
+  --------------------------------
+	LocalTempView 
+	   -> Local to a specific SparkSession
+	   -> Created using createOrReplaceTempView command
+		df1.createOrReplaceTempView("users")
+
+
+	GlobalTempView
+	   -> Can be accessed from multiple SparkSessions within the application
+	   -> Tied to "global_temp" database
+	   -> Created using createOrReplaceGlobalTempView command
+		df1.createOrReplaceGlobalTempView("gusers")
+
+  DataFrame Transformations
+  -------------------------
+
+   1. select
+
+
+   2. where / filter
+
+
+   3. orderBy / sort
+
+
+   4. groupBy   => returns 'pyspark.sql.group.GroupedData' object
+		   apply some aggregation method to retun a DataFrame
+
+
+   5. limit
+
+
+
+   Working with different file formats
+   -----------------------------------
+   JSON
+	read
+		df1 = spark.read.format("json").load(inputPath)
+		df1 = spark.read.load(inputPath, format="json")
+		df1 = spark.read.json(inputPath)
+
+	write
+		df3.write.format("json").save(outputPath)
+		df3.write.save(outputPath, format="json")
+		df3.write.json(outputPath)	
+
+  Parquet (default)
+	read
+		df1 = spark.read.format("parquet").load(inputPath)
+		df1 = spark.read.load(inputPath, format="parquet")
+		df1 = spark.read.parquet(inputPath)
+
+	write
+		df3.write.format("parquet").save(outputPath)
+		df3.write.save(outputPath, format="parquet")
+		df3.write.parquet(outputPath)
+
+
+  ORC
+	read
+		df1 = spark.read.format("orc").load(inputPath)
+		df1 = spark.read.load(inputPath, format="orc")
+		df1 = spark.read.orc(inputPath)
+
+	write
+		df3.write.format("orc").save(outputPath)
+		df3.write.save(outputPath, format="orc")
+		df3.write.orc(outputPath)
+
+
+   CSV (delimited text)
+
+	read
+		df1 = spark.read.format("csv").option("header", True).option("inferSchema", True).load(inputPath)
+		df1 = spark.read.format("csv").load(inputPath, header=True, inferSchema=True)
+		df1 = spark.read.csv(inputPath, header=True, inferSchema=True)
+		df1 = spark.read.csv(inputPath, header=True, inferSchema=True, sep="|")
+
+	write
+		df3.write.format("csv").save(outputPath, header=True)
+		df2.write.csv(outputPath, header=True)
+		df2.write.csv(outputPath, header=True, sep="|", mode="overwrite")
+
+   Text
+	read
+		df1 = spark.read.text(inputPath)
+		=> df1 will have one columns called 'value' of 'string' type
+
+	write
+		df1.write.text(outputPath)
+		=> You can only save a DF with a single text column in 'text' format.
+
+
+
+
+
+
+
+           
+
+
+
 
 
 
