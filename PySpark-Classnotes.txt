@@ -664,20 +664,138 @@
   -------------------------
 
    1. select
+	
+		df2 = df1.select("ORIGIN_COUNTRY_NAME",
+				"DEST_COUNTRY_NAME",
+				"count")
+		----------------------------------------
+		df2 = df1.select(expr("ORIGIN_COUNTRY_NAME as origin"),
+			expr("DEST_COUNTRY_NAME as destination"),
+			expr("count").cast("int"),
+			expr("count+10 as newCount"),
+			expr("count > 100 as highFrequency"),
+			expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME").alias("domestic"))
 
 
-   2. where / filter
+		df2.show()
+		df2.printSchema()
 
 
-   3. orderBy / sort
+  2. where / filter
+
+	df3 = df2.where("count > 500 and domestic = false")
+	df3 = df2.filter("count > 500 and domestic = false")
+	df3 = df2.where( col("count") > 200 )
+
+  3. orderBy / sort
+
+	df3 = df2.orderBy("count", "origin")
+	df3 = df2.sort("count", "origin")
+	df3 = df2.sort(desc("count"), asc("origin"))
 
 
-   4. groupBy   => returns 'pyspark.sql.group.GroupedData' object
-		   apply some aggregation method to retun a DataFrame
+  4. groupBy   => returns a 'pyspark.sql.group.GroupedData' object (not a DataFrame)
+		  Apply aggregation methods to return a DataFrame
 
 
-   5. limit
+	df3 = df2.groupBy("highFrequency", "domestic").count()
+	df3 = df2.groupBy("highFrequency", "domestic").sum("count")
+	df3 = df2.groupBy("highFrequency", "domestic").max("count")
+	df3 = df2.groupBy("highFrequency", "domestic").avg("count")
 
+	df3 = df2.groupBy("highFrequency", "domestic") \
+        	.agg( 	count("count").alias("count"),
+              		sum("count").alias("sum"),
+              		max("count").alias("max"),
+              		round(avg("count"),2).alias("avg"))
+
+	df3 = df2.groupBy("highFrequency", "domestic") \
+        	.agg( 	expr("sum(count) as sum"),
+              		expr("max(count) as max"),
+              		expr("avg(count) as avg"))
+
+
+  5. limit
+
+	df2 = df1.limit(10)
+
+
+  6. selectExpr
+
+	df2 = df1.selectExpr("ORIGIN_COUNTRY_NAME as origin",
+			"DEST_COUNTRY_NAME as destination",
+			"count",
+			"count+10 as newCount",
+			"count > 100 as highFrequency",
+			"ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME as domestic")
+	df2.show()
+
+
+  7. withColumn & withColumnRenamed
+
+	df3 = df1.withColumn("newCount", expr("count + 10")) \
+		.withColumn("highFrequency", expr("count > 100")) \
+		.withColumn("domestic", expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME")) \
+		.withColumnRenamed("ORIGIN_COUNTRY_NAME", "origin") \
+		.withColumnRenamed("DEST_COUNTRY_NAME", "destination") \
+		.withColumn("Country", lit("India"))
+
+	----------------------
+
+	df4 = df3.withColumn("ageGroup", when( col("age") < 13, "child")
+                                	.when( col("age") < 20, "teenager")
+                                	.when( col("age") < 60, "adult")
+                                	.otherwise("senior"))
+
+	df4 = df3.withColumn("ageGroup", when( expr("age < 13"), "child")
+                                	.when( expr("age between 13 and 19"), "teenager")
+                                	.when( expr("age < 60"), "adult")
+                                	.otherwise("senior"))
+
+
+  8. udf (User Defined Function)
+
+
+	def getAgeGroup( age ):
+		if (age <= 12):
+			return "child"
+		elif (age >= 13 and age <= 19):
+			return "teenager"
+		elif (age >= 20 and age < 60):
+			return "adult"
+		else:
+			return "senior"    
+
+	get_age_group = udf(getAgeGroup, StringType())
+
+	df4 = df3.withColumn("ageGroup", get_age_group(col("age")))
+
+	---------------------------
+
+	@udf(returnType = StringType())
+	def getAgeGroup( age ):
+		if (age <= 12):
+			return "child"
+		elif (age >= 13 and age <= 19):
+			return "teenager"
+		elif (age >= 20 and age < 60):
+			return "adult"
+		else:
+			return "senior"    
+
+
+	df4 = df3.withColumn("ageGroup", getAgeGroup(col("age")))
+	
+	------------------------------
+
+	spark.udf.register("get_age_group", getAgeGroup, StringType())
+
+	df3.createOrReplaceTempView("users")
+
+	qry = """select id, name, age, get_age_group(age) as ageGroup
+		   from users"""       
+
+	spark.sql(qry).show()
 
 
    Working with different file formats
@@ -740,10 +858,103 @@
 		=> You can only save a DF with a single text column in 'text' format.
 
 
+  Creating a DataFrame from programmatic data
+  -------------------------------------------
+
+
+ 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Creating an RDD from DataFrame
+  ------------------------------
+   
+        rdd1 = df1.rdd
+
+
+  Creating a DataFrame from programmatic data
+  -------------------------------------------
+   
+     	listUsers = [(1, "Raju", 5),
+		(2, "Ramesh", 15),
+		(3, "Rajesh", 18),
+		(4, "Raghu", 35),
+		(5, "Ramya", 25),
+		(6, "Radhika", 35),
+		(7, "Ravi", 70)]
+
+	df2 = spark.createDataFrame(listUsers).toDF("id", "name", "age")
+	df2 = spark.createDataFrame(listUsers, ["id", "name", "age"])
+
+
+  Creating a DataFrame from RDD
+  -----------------------------
+	rdd1 = spark.sparkContext.parallelize(listUsers)
+
+	df1 = rdd1.toDF(["id", "name", "age"])
+
+	df1.show()
+	df1.printSchema()
+
+
+  Creating a DataFrame with custom/programmatic schema
+  ----------------------------------------------------
+
+	mySchema = "id INT, name STRING, age INT"
+	df1 = spark.createDataFrame(listUsers, schema=mySchema)  
+	-----------------------------------------------------
+        filePath = "E:\\PySpark\data\\flight-data\\2015-summary-nh.csv"
+
+	mySchema = "origin STRING, destination STRING, count INT"
+	df1 = spark.read.csv(filePath, schema=mySchema) 
+	-----------------------------------------------------
+	mySchema = "ORIGIN_COUNTRY_NAME STRING, DEST_COUNTRY_NAME STRING, count INT"
+
+	df1 = spark.read.json(filePath, schema=mySchema)
+	df1 = spark.read.schema(mySchema).json(filePath)
+	df1.show(5)
+	df1.printSchema()
+	-----------------------------------------------------
+	mySchema = StructType([
+				 StructField("ORIGIN_COUNTRY_NAME", StringType(), True),
+				 StructField("DEST_COUNTRY_NAME", StringType(), True),
+				 StructField("count", IntegerType(), True)
+			   ])
+
+	df1 = spark.read.schema(mySchema).json(filePath)
+	df1.show(5)
+	df1.printSchema()
 
            
 
