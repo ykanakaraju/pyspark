@@ -373,6 +373,28 @@
                                 	.when( expr("age < 60"), "adult")
                                 	.otherwise("senior"))
 
+   8. UDF
+
+
+   9. dropDuplicates
+
+
+   10. distinct
+
+
+   11. dropna
+
+
+   12. repartition
+
+
+   13. coalesce
+
+
+   14. join
+
+
+
 
 
   LocalTempViews & GlobalTempViews
@@ -450,8 +472,6 @@
 		=> You can only save a DF with a single text column in 'text' format.
 
 
-
-
   Creating an RDD from DataFrame
   ------------------------------
    
@@ -512,18 +532,9 @@
 	df1.printSchema()
 
 
+  ========================================================================
 
-
-
-
-
-
-
-
-
-
-
-
+   
 
 
 
