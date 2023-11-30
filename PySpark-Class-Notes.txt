@@ -107,6 +107,18 @@
 
 
 
+		Downloading a file from Databricks
+		----------------------------------
+		/FileStore/<FILEPATH>
+		https://community.cloud.databricks.com/files/<FILEPATH>?o=4949609693130439
+
+		Example:
+		file path to be downloaded: dbfs:/FileStore/ctsdatasets/output/wc/part-00000
+		https://community.cloud.databricks.com/files/ctsdatasets/output/wc/part-00000?o=1072576993312365
+
+
+
+
    RDD (Resilient Distributed Dataset)
    -----------------------------------
 
@@ -203,6 +215,19 @@
            -> Data shuffle across partitions will happen.
            -> Complex and expensive
 	
+
+  RDD Execution Flow
+  ------------------
+
+	Application (ex: PySpark Shell or Your App in Spyder/PyCharm)
+	|
+	|--> Jobs (Each action command launches one job)
+		|
+		|--> Stages (one or more stages per Job. Each wide transformation causes a new stage.)
+			|
+			|--> Tasks (one task per partition of the RDD in that stage)
+				|
+				|--> Transformations (one or more transformations per task)	
 
 
   RDD Persistence
@@ -335,13 +360,117 @@
 
 
 
-  
+  Types of RDDs
+  -------------
+
+    Two types of RDDs:
+
+	Generic RDD:  RDD[U]				
+	Pair RDD:     RDD[(K, V)]			
+
+
+  8. mapValues		P: U -> V
+			Applied only on Pair RDD
+			Applies the function only to the 'value' part of the key-value pairs
+
+		rddPairs.mapValues(lambda x: x*10).collect()
+		-> In the above fn, x represents only the 'value' part of key-value pairs
+
+
+  9. sortBy		P: U -> V,  Optional: ascending (True/False), numPartitions
+			Sorts the objects of RDD based on the function output that they generate.
+
+		rdd1.sortBy(lambda x: x%2).glom().collect()
+		rdd1.sortBy(lambda x: x%2, False).glom().collect()
+		rdd1.sortBy(lambda x: x%2, True, 2).glom().collect()
+
+
+  10. groupBy		P: U -> V, Optional: numPartitions
+			Returns a Pair RDD where
+				key: Each unique value of the function output
+				value: 'ResultIterable' object containing RDD objects that produced the key
+
+		rddWc = sc.textFile("E:\\Spark\\wordcount.txt", 12) \
+        		.flatMap(lambda x: x.split()) \
+        		.groupBy(lambda x: x) \
+        		.mapValues(len) \
+        		.sortBy(lambda x: x[1], False, 1)
+
+  11. repartition	P: numPartitions
+			Is used to increase or decrease the number of output partitions	
+			Global shuffle	
+
+			
+		rdd2 = rdd1.repartition(5)
 
 
 
+  12. coalesce		P: numPartitions
+			Is used to only decrease the number of output partitions	
+			Partition merging
 
 
+		rdd2 = rdd1.coalesce(5)
 
+
+		Recommendations
+		---------------
+		-> The size of each partition should be between 100 MB to 1 GB
+		   (Ideally 128 MB if you are running on Hadoop)
+		-> The number of partitions should be a multiple of number of cores
+		-> The number of cores per executor should be 5
+
+
+  13. union, intersection, subtract
+
+		-> Operate on two generic RDDs.
+
+		Assume rdd1 has M partitions and rdd2 has N partitions
+
+		command				output
+		----------------------------------------------
+		rdd1.union(rdd2)		M+N, narrow
+		rdd1.intersection(rdd2)		M+N, wide
+		rdd1.subtract(rdd2)		M+N, wide
+
+
+  14. partitionBy	P: numPartitions, Optional: partition-function (default: hash)
+			Applied only on Pair RDDs
+			Controls which keys go to which partition based on partition-function applied to keys.
+           
+
+  		rdd4 = rdd1.map(lambda x: (x, 1)).partitionBy(3).map(lambda x: x[0])
+
+	
+  ..ByKey Transformations
+  -----------------------
+	=> Are wide transformations
+	=> Applied on Pair RDDs only
+	
+
+  15. sortByKey	P: None, Optional: ascending (True/False), numPartitions
+			Sorts the data based on the keys.
+
+		rddPairs.sortByKey().glom().collect()
+		rddPairs.sortByKey(False).glom().collect()
+		rddPairs.sortByKey(False, 3).glom().collect()
+
+
+  16. groupByKey	P: None, Optional: numPartitions
+			Returns a Pair RDD where:
+				key: Unique keys of the RDD
+				value: ResultIterable. Grouped values
+
+			CAUTION: do not use groupByKey if possible. 
+
+		rddWc = sc.textFile("E:\\Spark\\wordcount.txt", 1) \
+        		.flatMap(lambda x: x.split()) \
+        		.map(lambda x: (x, 1)) \
+        		.groupByKey() \
+        		.mapValues(sum) \
+        		.sortBy(lambda x: x[1], False)
+
+ 17. reduceByKey
 
 
 
