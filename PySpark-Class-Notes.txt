@@ -470,17 +470,201 @@
         		.mapValues(sum) \
         		.sortBy(lambda x: x[1], False)
 
- 17. reduceByKey
+
+  17. reduceByKey	P: (U, U) => U, Optional: numPartitions
+			Reduces all the 'values' of 'each unique-key' within each partition, and then, across partitions
+
+		wordcountRdd = sc.textFile("E:\\Spark\\wordcount.txt", 4) \
+                 	.flatMap(lambda x: x.split()) \
+                 	.map(lambda x: (x, 1)) \
+                 	.reduceByKey(lambda x, y: x + y) \
+                 	.sortBy(lambda x: x[1], False, 1)
 
 
 
+  RDD Actions
+  -----------
+
+  1. collect
+
+  2. count
+
+  3. saveAsTextFile
+
+  4. reduce		P: (U, U) => U
+			Reduces an entire RDD to one value of the same type by iterativly applying the function
+			on each partition in the first stage and then across partitions in the second stage.
+
+		rdd1		
+
+		P0: 2,3,5,1,4 -> reduce -> -11 -> reduce -> 30
+		P1: 3,6,8,7,9 -> reduce -> -27
+		P2: 5,0,7,9,3 -> reduce -> -14
+
+		rdd1.reduce(lambda x, y: x - y)
+
+
+		rddWc.collect()
+		[('hadoop', 25), ('flatmap', 12), ('hdfs', 6), ('sadas', 1), ('das', 6), ('spark', 40), ('asd', 5), ('scala', 28), ('hive', 19), ('transformations', 10), ('d', 1), ('map', 6), ('groupby', 6), ('flume', 6), ('oozie', 6), ('sqoop', 6), ('mapreduce', 6), ('rdd', 43), ('actions', 10)]
+
+		rddWc.reduce(lambda x, y: (x[0] + "," + y[0], x[1] + y[1]) )
+		('hadoop,flatmap,hdfs,sadas,das,spark,asd,scala,hive,transformations,d,map,groupby,flume,oozie,sqoop,mapreduce,rdd,actions', 242)
+
+  5. take(n)
+
+		rdd1.take(5)  => returns a list with first 5 objects.
+
+  6. takeOrdered
+
+		rddWords.takeOrdered(20)   => returns a list with first 5 ordered objects.
+		rddWords.takeOrdered(20, lambda x: len(x))
+
+  7. takeSample	
+
+	
+		rddWords.takeSample(True, 20)   	=> withReplacement = True	
+		rddWords.takeSample(True, 20, 53)	=> 53 is a seed here
+
+		rddWords.takeSample(False, 20)   	=> withReplacement = False	
+		rddWords.takeSample(False, 20, 53)	=> 53 is a seed here
+
+  8. countByValue
+
+		rdd1.countByValue()
+
+  9. countByKey
+
+
+  10. foreach  	 => Runs a function on all objects of the RDD, but does not return any value.
+
+
+  11. saveAsSequenceFile
 
 
 
+  Use-Case
+  --------
+	dataset: https://github.com/ykanakaraju/pyspark/blob/master/data_git/cars.tsv
+
+	From cars.tsv dataset, find out the average-weight of all the models of each make 
+	of Amerigin origin cars. 
+	-> Arrange the data in the DESCENDING order of average weight
+	-> Save the output as a single text file.
+
+	=> Try it yourself
 
 
 
+  Closures
+  --------
+  In Spark, a closure constitutes all the variables and methods which must be visible for the executor 
+  to perform its computations on the RDD. 
 
+  -> This closure is serialized and sent to each executor.
+
+
+	c = 0
+
+	def is_prime(n):
+	  return True if n is prime
+	  else
+	  return False
+
+	def f1(n):
+	  global c
+	  if is_prime(n) :
+	     c += 1 
+	  return n*2
+
+	rdd1 = sc.parallelize( range(1, 4001), 4 )
+	rdd2 = rdd1.map(f1)
+	rdd2.collect()
+
+	print(c)	// 0
+
+	
+
+	Limitation: We can not use local variables (that are part of a closure) to implement global counters. 
+	Solutions: Use an 'Accumulator' variable.
+
+
+  Shared Variables
+  ================ 
+
+  1. Accumulator Variable
+	
+	-> Is a shared variable that is not part of the closure.
+	-> Maintained by driver.
+	-> All tasks can add to it using 'add' method.	
+	-> Only driver can read the value of accumulator. Tasks can only write to it.
+	-> Use accumulators to implement global counters. 
+
+
+	c = sc.accumulator(0)
+
+	def is_prime(n):
+	  return True if n is prime
+	  else
+	  return False
+
+	def f1(n):
+	  global c
+	  if is_prime(n) :
+	     c.add(1)
+	  return n*2
+
+	rdd1 = sc.parallelize( range(1, 4001), 4 )
+	rdd2 = rdd1.map(f1)
+	rdd2.collect()
+
+	print(c.value)	  // 170
+
+
+  2. Broadcast variable
+
+	-> broadcast variable is a shared variable, hence, not a part of closure
+	-> Driver sends a copy of the broadcast variable to every executor
+	-> All the tasks within that executor can read from the one copy (of the executor)
+	-> You can convert large immutable collections into broadcast variables. 
+
+
+	d = sc.broadcast({ 1:a. 2:b, 3:c, 4:d, 5:e, 6:f, 7:g, ........})   #100 MB
+
+	def f1(n):
+	   global d
+	   return d.value[n]
+
+	rdd1 = sc.parallelize([1,2,3,4,5,6,.....], 4)
+	rdd2 = rdd1.map(f1)
+	rdd2.collect()       
+
+
+
+  Spark-submit command
+  --------------------
+   
+    -> Is a single command to send any spark application (python, scala, java, R) to any cluster manager.
+
+	spark-submit [options] <app jar | python file | R file> [app arguments]
+
+	spark-submit --master yarn \
+		--deploy-mode cluster \
+		--driver-memory	2G \
+		--executor-memory 10G \
+		--driver-cores 2 \
+		--executor-cores 5 \
+		--num-executors 8 \
+		E:\\Spark\\wordcount.py [app args]
+
+
+	spark-submit --master local E:\PySpark\spark_core\examples\wordcount_cmdargs.py wordcount.txt wc_out_2 1
+
+	spark-submit --master local E:\PySpark\spark_core\examples\wordcount.py
+
+
+  ===============
+    Spark SQL
+  ===============
 
 
 
