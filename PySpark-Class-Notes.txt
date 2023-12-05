@@ -666,6 +666,463 @@
     Spark SQL
   ===============
 
+    
+    => This is the main API of Spark for data analysis/data engineering/data science
+	
+	-> Is a high-level API built on top of Spark Core.	
+	-> Spark Structured/Semi-structured data processing API
+
+
+    => Supported Formats:
+	
+	File Formats: Parquet (default), ORC, JSON, CSV (delimited text), Text
+	JDBC Format:  RDBMS, NoSQL Databases
+	Hive Format:  Hive warehouse
+
+
+   => SparkSession
+	
+	-> Represents a user-session inside an application
+	-> An application can contain multiple sessions.
+	-> SparkSession is the starting point of executions
+
+		application => SparkContext
+		session	=> SparkSession
+
+	In Databricks:
+		A cluster -> Represents an application
+		Notebooks -> Represent Sessions (in the application)	
+
+		spark = SparkSession \
+			.builder \
+			.appName("Basic Dataframe Operations") \
+			.config("spark.master", "local[*]") \
+			.getOrCreate()    
+
+  
+   => DataFrame
+
+	-> Is the main data abstraction	
+
+	-> DataFrame represents a collection of in-memory partitions that are immutable and lazily evaluated
+	   -> each partition contains "Row" objects
+
+        -> DataFrame has two components
+
+		-> Data   : Row objects
+		-> Schema : StructType object
+
+		StructType(
+		    [
+			StructField('age', LongType(), True), 
+			StructField('gender', StringType(), True), 
+			StructField('name', StringType(), True), 
+			StructField('phone', StringType(), True), 
+			StructField('userid', LongType(), True)
+		    ]
+		)
+
+
+  
+   Basic Steps in Spark SQL 		
+   ------------------------
+	
+	1. Load/Read the data into a DataFrame	
+
+		df1 = spark.read.format("json").load("/FileStore/users.json")
+		df1 = spark.read.load("/FileStore/users.json", format="json")
+		df1 = spark.read.json("/FileStore/users.json")
+		
+		Applying schema
+		---------------
+		users_schema = StructType(
+		    [
+			StructField('age', LongType(), True), 
+			StructField('gender', StringType(), True), 
+			StructField('name', StringType(), True), 
+			StructField('phone', StringType(), True), 
+			StructField('userid', LongType(), True)
+		    ])
+
+		df1 = spark.read.schema(users_schema).json("/FileStore/users.json")
+
+
+	2. Transform the DataFrame using Transformations API or using SQL
+
+		Using Transformation methods
+		----------------------------
+		df2 = df1.select("userid", "name", "age", "gender", "phone") \
+        		.where("age is not null") \
+        		.orderBy("gender", "age") \
+        		.groupBy("gender", "age").count() \
+        		.limit(4)
+
+
+		Using SQL
+		---------
+		df1.createOrReplaceTempView("users")
+
+		df3 = spark.sql("""SELECT age, count(1) as count
+        			   FROM users
+        			   WHERE age IS NOT NULL
+        			   GROUP BY gender, age
+        			   ORDER BY gender, age
+        			   LIMIT 4""")
+		display(df3)	
+
+
+ 	3. Save/Write the DataFrame into a target location 
+	
+		df3.write.format("json").save("dbfs:/FileStore/output/json")
+		df3.write.save("dbfs:/FileStore/output/json", format="json")
+		df3.write.json("dbfs:/FileStore/output/json")
+
+ 
+  Save Modes
+  ----------
+	- Define what should happen when you are writing to an existing directory
+  		- ErrorIfExists (default)
+  		- Ignore
+  		- Append   (appends additional files to the existing directory)
+  		- Overwrite (overwrites old directory)
+
+
+	df3.write.mode("append").format("json").save("dbfs:/FileStore/output/json")
+	df3.write.mode("overwrite").format("json").save("dbfs:/FileStore/output/json")
+
+	df3.write.format("json").save("dbfs:/FileStore/output/json", mode="append")
+
+
+  LocalTempViews & GlobalTempViews
+  --------------------------------
+	LocalTempView 
+	   -> Local to a specific SparkSession
+	   -> Created using createOrReplaceTempView command
+		df1.createOrReplaceTempView("users")
+
+
+	GlobalTempView
+	   -> Can be accessed from multiple SparkSessions within the application
+	   -> Tied to "global_temp" database
+	   -> Created using createOrReplaceGlobalTempView command
+		df1.createOrReplaceGlobalTempView("gusers")
+
+
+
+  DataFrame Transformations
+  -------------------------
+
+   1. select
+	
+		df2 = df1.select("ORIGIN_COUNTRY_NAME",
+				"DEST_COUNTRY_NAME",
+				"count")
+		----------------------------------------
+		df2 = df1.select(expr("ORIGIN_COUNTRY_NAME as origin"),
+			expr("DEST_COUNTRY_NAME as destination"),
+			expr("count").cast("int"),
+			expr("count+10 as newCount"),
+			expr("count > 100 as highFrequency"),
+			expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME").alias("domestic"))
+
+
+		df2.show()
+		df2.printSchema()
+
+
+  2. where / filter
+
+	df3 = df2.where("count > 500 and domestic = false")
+	df3 = df2.filter("count > 500 and domestic = false")
+	df3 = df2.where( col("count") > 200 )
+
+  3. orderBy / sort
+
+	df3 = df2.orderBy("count", "origin")
+	df3 = df2.sort("count", "origin")
+	df3 = df2.sort(desc("count"), asc("origin"))
+
+
+  4. groupBy   => returns a 'pyspark.sql.group.GroupedData' object (not a DataFrame)
+		  Apply aggregation methods to return a DataFrame
+
+
+	df3 = df2.groupBy("highFrequency", "domestic").count()
+	df3 = df2.groupBy("highFrequency", "domestic").sum("count")
+	df3 = df2.groupBy("highFrequency", "domestic").max("count")
+	df3 = df2.groupBy("highFrequency", "domestic").avg("count")
+
+	df3 = df2.groupBy("highFrequency", "domestic") \
+        	.agg( 	count("count").alias("count"),
+              		sum("count").alias("sum"),
+              		max("count").alias("max"),
+              		round(avg("count"),2).alias("avg"))
+
+	df3 = df2.groupBy("highFrequency", "domestic") \
+        	.agg( 	expr("sum(count) as sum"),
+              		expr("max(count) as max"),
+              		expr("avg(count) as avg"))
+
+
+  5. limit
+
+	df2 = df1.limit(10)
+
+
+  6. selectExpr
+
+	df2 = df1.selectExpr("ORIGIN_COUNTRY_NAME as origin",
+			"DEST_COUNTRY_NAME as destination",
+			"count",
+			"count+10 as newCount",
+			"count > 100 as highFrequency",
+			"ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME as domestic")
+	df2.show()
+
+
+  7. withColumn & withColumnRenamed
+
+	df3 = df1.withColumn("newCount", expr("count + 10")) \
+		.withColumn("highFrequency", expr("count > 100")) \
+		.withColumn("domestic", expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME")) \
+		.withColumnRenamed("ORIGIN_COUNTRY_NAME", "origin") \
+		.withColumnRenamed("DEST_COUNTRY_NAME", "destination") \
+		.withColumn("Country", lit("India"))
+
+	----------------------
+
+	df4 = df3.withColumn("ageGroup", when( col("age") < 13, "child")
+                                	.when( col("age") < 20, "teenager")
+                                	.when( col("age") < 60, "adult")
+                                	.otherwise("senior"))
+
+	df4 = df3.withColumn("ageGroup", when( expr("age < 13"), "child")
+                                	.when( expr("age between 13 and 19"), "teenager")
+                                	.when( expr("age < 60"), "adult")
+                                	.otherwise("senior"))  
+
+
+  8. drop
+
+
+  9. dropDuplicates
+
+ 
+  10. distinct
+
+  
+  11. repartition
+
+
+  12. coalesce
+
+
+  13. udf (User Defined Function)
+
+
+	def getAgeGroup( age ):
+		if (age <= 12):
+			return "child"
+		elif (age >= 13 and age <= 19):
+			return "teenager"
+		elif (age >= 20 and age < 60):
+			return "adult"
+		else:
+			return "senior"    
+
+	get_age_group = udf(getAgeGroup, StringType())
+
+	df4 = df3.withColumn("ageGroup", get_age_group(col("age")))
+
+	---------------------------
+
+	@udf(returnType = StringType())
+	def getAgeGroup( age ):
+		if (age <= 12):
+			return "child"
+		elif (age >= 13 and age <= 19):
+			return "teenager"
+		elif (age >= 20 and age < 60):
+			return "adult"
+		else:
+			return "senior"    
+
+
+	df4 = df3.withColumn("ageGroup", getAgeGroup(col("age")))
+	
+	------------------------------
+
+	spark.udf.register("get_age_group", getAgeGroup, StringType())
+
+	df3.createOrReplaceTempView("users")
+
+	qry = """select id, name, age, get_age_group(age) as ageGroup
+		   from users"""       
+
+	spark.sql(qry).show()
+
+  14. join
+
+
+
+   Working with different file formats
+   -----------------------------------
+   JSON
+	read
+		df1 = spark.read.format("json").load(inputPath)
+		df1 = spark.read.load(inputPath, format="json")
+		df1 = spark.read.json(inputPath)
+
+	write
+		df3.write.format("json").save(outputPath)
+		df3.write.save(outputPath, format="json")
+		df3.write.json(outputPath)	
+
+  Parquet (default)
+	read
+		df1 = spark.read.format("parquet").load(inputPath)
+		df1 = spark.read.load(inputPath, format="parquet")
+		df1 = spark.read.parquet(inputPath)
+
+	write
+		df3.write.format("parquet").save(outputPath)
+		df3.write.save(outputPath, format="parquet")
+		df3.write.parquet(outputPath)
+
+
+  ORC
+	read
+		df1 = spark.read.format("orc").load(inputPath)
+		df1 = spark.read.load(inputPath, format="orc")
+		df1 = spark.read.orc(inputPath)
+
+	write
+		df3.write.format("orc").save(outputPath)
+		df3.write.save(outputPath, format="orc")
+		df3.write.orc(outputPath)
+
+
+   CSV (delimited text)
+
+	read
+		df1 = spark.read.format("csv").option("header", True).option("inferSchema", True).load(inputPath)
+		df1 = spark.read.format("csv").load(inputPath, header=True, inferSchema=True)
+		df1 = spark.read.csv(inputPath, header=True, inferSchema=True)
+		df1 = spark.read.csv(inputPath, header=True, inferSchema=True, sep="|")
+
+	write
+		df3.write.format("csv").save(outputPath, header=True)
+		df2.write.csv(outputPath, header=True)
+		df2.write.csv(outputPath, header=True, sep="|", mode="overwrite")
+
+   Text
+	read
+		df1 = spark.read.text(inputPath)
+		=> df1 will have one columns called 'value' of 'string' type
+
+	write
+		df1.write.text(outputPath)
+		=> You can only save a DF with a single text column in 'text' format.
+
+
+  Creating an RDD from DataFrame
+  ------------------------------
+   
+        rdd1 = df1.rdd
+
+
+  Creating a DataFrame from programmatic data
+  -------------------------------------------
+   
+     	listUsers = [(1, "Raju", 5),
+		(2, "Ramesh", 15),
+		(3, "Rajesh", 18),
+		(4, "Raghu", 35),
+		(5, "Ramya", 25),
+		(6, "Radhika", 35),
+		(7, "Ravi", 70)]
+
+	df2 = spark.createDataFrame(listUsers).toDF("id", "name", "age")
+	df2 = spark.createDataFrame(listUsers, ["id", "name", "age"])
+
+
+  Creating a DataFrame from RDD
+  -----------------------------
+	rdd1 = spark.sparkContext.parallelize(listUsers)
+
+	df1 = rdd1.toDF(["id", "name", "age"])
+
+	df1.show()
+	df1.printSchema()
+
+
+  Creating a DataFrame with custom/programmatic schema
+  ----------------------------------------------------
+
+	mySchema = "id INT, name STRING, age INT"
+	df1 = spark.createDataFrame(listUsers, schema=mySchema)  
+	-----------------------------------------------------
+        filePath = "E:\\PySpark\data\\flight-data\\2015-summary-nh.csv"
+
+	mySchema = "origin STRING, destination STRING, count INT"
+	df1 = spark.read.csv(filePath, schema=mySchema) 
+	-----------------------------------------------------
+	mySchema = "ORIGIN_COUNTRY_NAME STRING, DEST_COUNTRY_NAME STRING, count INT"
+
+	df1 = spark.read.json(filePath, schema=mySchema)
+	df1 = spark.read.schema(mySchema).json(filePath)
+	df1.show(5)
+	df1.printSchema()
+	-----------------------------------------------------
+	mySchema = StructType([
+				 StructField("ORIGIN_COUNTRY_NAME", StringType(), True),
+				 StructField("DEST_COUNTRY_NAME", StringType(), True),
+				 StructField("count", IntegerType(), True)
+			   ])
+
+	df1 = spark.read.schema(mySchema).json(filePath)
+	df1.show(5)
+	df1.printSchema()
+
+
+  Use-Case
+  --------
+
+    Dataset: https://github.com/ykanakaraju/pyspark/tree/master/data_git/movielens
+
+    From movies.csv and ratings.csv datasets, fetch the top 10 movies with highest average user-rating
+	-> Consider only those movies that are rated by atleast 50 users
+	-> Data: movieId, title, totalRatings, averageRating
+	-> Arrange the data in the DESC order of averageRating
+	-> Save the output as a single pipe-separated CSV file with header
+	-> Use only DF transformation methods (not SQL)
+
+	=> Try it yourself
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
