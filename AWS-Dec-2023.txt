@@ -1,0 +1,286 @@
+    
+  Agenda
+  ---------   
+   1. PySpark Basics & Spark SQL 	8 hours
+   2. AWS Basics & AWS Infra		4 hours
+   3. Amazon S3				4 hours
+   4. AWS Lambda			4 hours
+   5. AWS Glue				8 hours
+   6. AWS Athena 			2 hours
+   7. Project (CDC)			4 hours
+
+
+  Course Materials
+  ----------------
+    -> PDF Presentations
+    -> Code Modules, Instructions, Scripts, Notebooks
+    -> Class Notes
+    -> Github: 	https://github.com/ykanakaraju/pyspark
+		https://github.com/ykanakaraju/aws-cts  
+
+
+  Spark
+  -----
+
+   -> Spark is an in-memory distributed computing framework for performing big data analytics.
+
+   -> Spark is written in SCALA language
+
+   -> Spark is a polyglot
+	-> Scala, Java, Python, R (and SQL)
+
+   -> Spark has unified stack for data analytics
+
+   -> Spark APIs
+	-> Spark Core API  : Low-level API. Uses RDDs
+	-> Spark SQL	   : Structured/semi-structured data processing (Batch)
+	-> Spark Streaming : DStreams API, Structured streaming
+	-> Spark MLLib	   : Predictive analytics using ML
+	-> Spark GraphX	   : Graph Processing
+
+    
+  Spark Architecture
+  ------------------
+
+	1. Cluster Manager
+		-> Jobs are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, Standalone, YARN, Mesos, Kubernetes		
+
+	2. Driver
+		-> Master process
+		-> Runs the SparkContext object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
+
+		Deploy Modes:
+		1. Client : default, driver runs on the client. 
+		2. Cluster : driver runs on one of the nodes on the cluster.
+
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> receives the tasks from the Driver
+		-> all tasks run the same execution code but on different partitions of the data
+		-> the status of tasks are reported to the driver. 
+
+
+  RDD (Resilient Distributed Dataset)
+  -----------------------------------
+	
+   -> RDD is the fundamental data abstraction of Spark Core
+
+   -> RDD represents a collection of distributed in-memory partitions
+	 -> Partition is a collections of objects (of some type)
+
+   -> RDDs are lazily evaluated
+	-> Transformations does not cause execution. 
+	-> Actions trigger execution.
+
+   -> RDDs are immutable
+	-> We can not change the content of an RDD once created. 
+	-> We can only transform to other RDDs
+
+   -> RDDs are resilient
+	-> RDDs can recompute (missing) partitions at run time 
+
+
+  Creating RDDs
+  -------------
+
+    Three ways:
+
+	1. Creating an RDD from external file
+
+		rddFile = sc.textFile( <filePath>, n )
+		rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+
+		=> default number of partitions is as per the value of "sc.defaultMinPartitions"
+		=> "sc.defaultMinPartitions" = 2 if core >= 2, else 1
+
+
+	2. Creating an RDD from programmatic data
+
+		rdd1 = sc.parallelize(<some python collection>, n)
+		rdd1 = sc.parallelize([3,2,1,4,2,3,5,4,6,7,8,9,0,8,9,0,8,6,4,1,2,3,2,4,6,5,7,8,9,6,7,5], 3)
+
+		=> default number of partitions is as per the value of "sc.defaultParallelism"
+		=> "sc.defaultMinPartitions" = number of cores allocated to your application
+
+
+	3. Creating an RDD by applying transformations on exiting RDD
+
+		rddWords = rddFile.flatMap(lambda x: x.split())
+
+		-> By default the output RDD will have the same number of partitions as input partitions
+
+
+  RDD Operations
+  --------------
+	Two operations
+
+	1. Transformations
+		-> Creates an RDD Lineage DAG
+		-> Does not cause execution
+
+	2. Actions
+		-> Executes an RDD and launchs a Job in the cluster
+		-> Produces some output
+		-> Converts logical plan (DAG) to a physical plan for execution. 
+
+
+  RDD Lineage DAG   
+  ---------------
+   (DAG: Directed Acyclic Graph)
+   -> Represents a logical plan on how to execute the RDD.
+   -> Lineage DAG stores the heirarchy of dependencies all the way from the very first RDD.
+
+	rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+	Lineage DAG of rddFile => (4) rddFile -> sc.textFile on wordcount.txt
+
+	rddWords = rddFile.flatMap(lambda x: x.split())
+	Lineage DAG of rddWords => (4) rddWords -> rddFile.flatMap -> sc.textFile on wordcount.txt
+
+	rddPairs = rddWords.map(lambda x: (x, 1))
+	Lineage DAG of rddPairs => (4) rddPairs -> rddWords.map -> rddFile.flatMap -> sc.textFile
+
+	rddWc = rddPairs.reduceByKey(lambda x, y: x + y)
+	Lineage DAG of rddWc => (4) rddWc -> rddPairs.reduceByKey -> rddWords.map -> rddFile.flatMap -> sc.textFile
+
+  
+  
+  RDD Execution Flow
+  ------------------
+
+	Application (ex: PySpark Shell or You App in Spyder/PyCharm)
+	|
+	|--> Jobs (Each action command launches one job)
+		|
+		|--> Stages (one or more stages per Job; wide transformation causes stage transition)
+			|
+			|--> Tasks (one task per partition of the RDD in that stage)
+				|
+				|--> Transformations (one or more transformations per task)	
+
+  
+
+  Getting started with Spark
+  --------------------------
+ 
+    1. Creating a local development environment
+
+	-> Install Anaconda distribution  
+	-> Follow the instructions given in the document:
+		https://github.com/ykanakaraju/pyspark/blob/master/Pyspark-JupyterNotebooks-Windows-Setup.pdf
+
+    2. Signup to Databricks Community Edition (free edition)
+	
+	-> Signup: https://www.databricks.com/try-databricks
+	   -> Click on "Get started with Community Edition" in second screen
+  
+	-> Login: https://community.cloud.databricks.com/login.html
+
+
+ 
+  Spark SQL
+  =========
+
+   -> Spark's structured / semi-structured data processing API
+   
+	File Formats : Parquet (default), ORC, JSON, CSV (delimited text), Text
+	JDBC Format  : RDBMS, NoSQL
+	Hive Format  : Hive Warehouse	
+
+   -> SparkSession
+
+	-> Starting point of execution
+	-> Represents a session inside an application
+	-> Each session can have its own configuration. 
+
+		spark = SparkSession \
+    			.builder \
+    			.appName("Basic Dataframe Operations") \
+    			.config("spark.master", "local[*]") \
+    			.getOrCreate()  
+
+   -> DataFrames
+
+		Data => Rows
+		Schema => StructType
+
+			StructType(
+			     [
+				StructField('age', LongType(), True), 
+				StructField('gender', StringType(), True), 
+				StructField('name', StringType(), True), 
+				StructField('phone', StringType(), True), 
+				StructField('userid', LongType(), True)	
+			     ]
+			)
+
+
+
+
+   Spark SQL Basic Steps
+   ---------------------
+
+    1. Reading/Loading data into a DF
+
+		df1 = spark.read.format("json").load(input_path)
+		df1 = spark.read.load(input_path, format="json")
+		df1 = spark.read.json(input_path)
+
+
+    2. Transforming a DF 
+
+		Using DF Transformation methods
+		-------------------------------
+		df2 = df1.select("userid", "name", "age", "gender", "phone") \
+        		.where("age is not null") \
+        		.orderBy("gender", "age") \
+        		.groupBy("age").count() \
+        		.limit(4)
+            
+		display(df2)
+
+
+		Using SQL
+		-------------------------------
+		df1.createOrReplaceTempView("users")
+
+		df3 = spark.sql("""SELECT age, count(1) as count
+        			   FROM users
+        			   WHERE age IS NOT NULL
+        			   GROUP BY gender, age
+        			   ORDER BY gender, age
+        			   LIMIT 4""")
+		display(df3)
+
+
+
+    3. Writing/Saving the DF data into some destination
+
+		df2.write.format("json").save(output_path)
+		df2.write.save(output_path, format="json")
+		df2.write.json(output_path)
+
+		df2.write.mode("overwrite").json(output_path)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
