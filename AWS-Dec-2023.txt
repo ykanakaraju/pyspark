@@ -1,7 +1,7 @@
     
   Agenda
   ---------   
-   1. PySpark Basics & Spark SQL 	8 hours
+   1. PySpark Basics & SparkSQL Basics	8 hours
    2. AWS Basics & AWS Infra		4 hours
    3. Amazon S3				4 hours
    4. AWS Lambda			4 hours
@@ -208,7 +208,7 @@
 
    -> DataFrames
 
-		Data => Rows
+		Data   => Rows
 		Schema => StructType
 
 			StructType(
@@ -270,6 +270,123 @@
 		df2.write.mode("overwrite").json(output_path)
 
 
+  Save Modes
+  ----------
+	- Define what should happen when you are writing to an existing directory
+  		- ErrorIfExists (default)
+  		- Ignore
+  		- Append   (appends additional files to the existing directory)
+  		- Overwrite (overwrites old directory)
+
+
+	df3.write.mode("append").format("json").save("dbfs:/FileStore/output/json")
+	df3.write.mode("overwrite").format("json").save("dbfs:/FileStore/output/json")
+
+	df3.write.format("json").save("dbfs:/FileStore/output/json", mode="append")
+
+
+
+  LocalTempViews & GlobalTempViews
+  --------------------------------
+	LocalTempView 
+	   -> Local to a specific SparkSession
+	   -> Created using createOrReplaceTempView command
+		df1.createOrReplaceTempView("users")
+
+
+	GlobalTempView
+	   -> Can be accessed from multiple SparkSessions within the application
+	   -> Tied to "global_temp" database
+	   -> Created using createOrReplaceGlobalTempView command
+		df1.createOrReplaceGlobalTempView("gusers")
+
+
+
+
+  Working with different file formats
+  -----------------------------------
+
+  JSON
+	read
+		df1 = spark.read.format("json").load(inputPath)
+		df1 = spark.read.load(inputPath, format="json")
+		df1 = spark.read.json(inputPath)
+
+	write
+		df3.write.format("json").save(outputPath)
+		df3.write.save(outputPath, format="json")
+		df3.write.json(outputPath)	
+
+  Parquet (default)
+	read
+		df1 = spark.read.format("parquet").load(inputPath)
+		df1 = spark.read.load(inputPath, format="parquet")
+		df1 = spark.read.parquet(inputPath)
+
+	write
+		df3.write.format("parquet").save(outputPath)
+		df3.write.save(outputPath, format="parquet")
+		df3.write.parquet(outputPath)
+
+
+   ORC
+	read
+		df1 = spark.read.format("orc").load(inputPath)
+		df1 = spark.read.load(inputPath, format="orc")
+		df1 = spark.read.orc(inputPath)
+
+	write
+		df3.write.format("orc").save(outputPath)
+		df3.write.save(outputPath, format="orc")
+		df3.write.orc(outputPath)
+
+
+   CSV (delimited text)
+
+	read
+		df1 = spark.read.format("csv").option("header", True).option("inferSchema", True).load(inputPath)
+		df1 = spark.read.format("csv").load(inputPath, header=True, inferSchema=True)
+		df1 = spark.read.csv(inputPath, header=True, inferSchema=True)
+		df1 = spark.read.csv(inputPath, header=True, inferSchema=True, sep="|")
+
+	write
+		df3.write.format("csv").save(outputPath, header=True)
+		df2.write.csv(outputPath, header=True)
+		df2.write.csv(outputPath, header=True, sep="|", mode="overwrite")
+
+   Text
+	read
+		df1 = spark.read.text(inputPath)
+		=> df1 will have one columns called 'value' of 'string' type
+
+	write
+		df1.write.text(outputPath)
+		=> You can only save a DF with a single text column in 'text' format.
+
+
+
+
+
+
+
+
+
+  DataFrame Transformations
+  --------------------------
+
+  1. select
+
+
+  2. where
+
+
+  3. orderBy
+
+
+  4. groupBy
+
+
+  5. limit
 
 
 
