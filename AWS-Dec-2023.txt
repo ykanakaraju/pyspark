@@ -301,8 +301,6 @@
 		df1.createOrReplaceGlobalTempView("gusers")
 
 
-
-
   Working with different file formats
   -----------------------------------
 
@@ -365,28 +363,327 @@
 
 
 
+ DataFrame Transformations
+ -------------------------
+
+ 1. select
+
+	df2 = df1.select("ORIGIN_COUNTRY_NAME", "DEST_COUNTRY_NAME", "count")
+
+	df2 = df1.select(col("ORIGIN_COUNTRY_NAME").alias("origin"),
+                 column("DEST_COUNTRY_NAME").alias("destination"),
+                 expr("count").cast("int"),
+                 expr("count + 10 as newCount"),
+                 expr("count > 200 as highFrequency"),
+                 expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME as domestic"))
 
 
+  2. where / filter
+
+	df3 = df2.where("highFrequency = true and destination = 'United States'")
+	df3 = df2.filter("highFrequency = true and destination = 'United States'")
+
+	df3 = df2.where( col("count") > 100 )
+
+	df3.show(5)
 
 
+  3. orderBy / sort
+
+	df3 = df2.orderBy("count", "origin")
+	df3 = df2.orderBy(desc("count"), asc("origin"))
 
 
-  DataFrame Transformations
-  --------------------------
-
-  1. select
+  4. groupBy  => returns a "GroupedData" object
+		 apply some aggregation method to return a DataFrame
 
 
-  2. where
+	df3 = df2.groupBy("highFrequency", "domestic").count()
+	df3 = df2.groupBy("highFrequency", "domestic").sum("count")
+	df3 = df2.groupBy("highFrequency", "domestic").avg("count")
+	df3 = df2.groupBy("highFrequency", "domestic").max("count")
 
-
-  3. orderBy
-
-
-  4. groupBy
+	df3 = df2.groupBy("highFrequency", "domestic") \
+        	  .agg( count("count").alias("count"),
+              		sum("count").alias("sum"),
+              		max("count").alias("max"),
+              		round(avg("count"), 2).alias("avg")
+		   )
 
 
   5. limit
+
+	df2 = df1.limit(10)
+
+
+  6. selectExpr
+
+	   df2 = df1.selectExpr("ORIGIN_COUNTRY_NAME as origin",
+                 		"DEST_COUNTRY_NAME as destination",
+                 		"count",
+                 		"count + 10 as newCount",
+                 		"count > 200 as highFrequency",
+                 		"ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME as domestic")
+
+
+  7. withColumn 
+
+	df3 = df1.withColumn("newCount", col("count") + 10) \
+        	.withColumn("highFrequency", expr("count > 200")) \
+        	.withColumn("domestic", expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME")) \
+        	.withColumn("count", col("count").cast("int")) \
+        	.withColumn("country", lit("India") )
+
+	df3 = df2.withColumn("ageGroup", when(col("age") < 13, "child")
+                                 	.when(col("age") < 20, "teenager")
+                                 	.when(col("age") < 60, "adult")
+                                 	.otherwise("senior"))
+
+  8. withColumnRenamed
+
+	df3 = df1.withColumn("newCount", col("count") + 10) \
+		.withColumn("highFrequency", expr("count > 200")) \
+		.withColumn("domestic", expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME")) \
+		.withColumnRenamed("DEST_COUNTRY_NAME", "destination") \
+		.withColumnRenamed("ORIGIN_COUNTRY_NAME", "origin")
+
+
+  9. udf (user-defined-function)
+
+	def getAgeGroup( age ):
+		if (age <= 12):
+			return "child"
+		elif (age >= 13 and age <= 19):
+			return "teenager"
+		elif (age >= 20 and age < 60):
+			return "adult"
+		else:
+			return "senior"		
+	   
+	get_age_group_udf = udf(getAgeGroup, StringType())    
+		
+	df3 = df2.withColumn("ageGroup", get_age_group_udf(col("age")) )
+
+	-------------------------------------------
+
+	@udf(returnType = StringType())
+	def get_age_group( age ):
+		if (age <= 12):
+			return "child"
+		elif (age >= 13 and age <= 19):
+			return "teenager"
+		elif (age >= 20 and age < 60):
+			return "adult"
+		else:
+			return "senior"
+		  
+	df3 = df2.withColumn("ageGroup", get_age_group(col("age")) )
+	
+	-------------------------------------------
+
+	spark.udf.register("get_age_group_udf", get_age_group, StringType())
+
+	qry = "select id, name, age, get_age_group_udf(age) as ageGroup from users"
+
+	spark.sql(qry).show()
+
+
+  10. drop	=> excludes the specified columns of the input DF in the output DF.
+
+	df3 = df2.drop("newCount", "highFrequency")
+	df3.show()
+
+
+  11. dropna	=> drops the rows with NULL values in any or specified columns
+
+	usersDf = spark.read.json("E:\\PySpark\\data\\users.json")
+	usersDf.show()
+
+	usersDf.dropna().show()
+	usersDf.dropna(subset=["name", "phone"]).show()
+
+
+  12. dropDuplicates   => drops the duplicate rows
+
+	listUsers = [(1, "Raju", 5),
+				 (1, "Raju", 5),
+				 (3, "Raju", 5),
+				 (4, "Raghu", 35),
+				 (4, "Raghu", 35),
+				 (6, "Raghu", 35),
+				 (7, "Ravi", 70)]
+
+	userDf = spark.createDataFrame(listUsers, ["id", "name", "age"])
+	userDf.show()
+
+	userDf.dropDuplicates().show()
+	userDf.dropDuplicates(["name", "age"]).show()
+
+
+  13. distinct	 => returns distinct rows of the DF
+
+	userDf.distinct().show()
+
+
+	Q: How many UNIQUE values are there in DEST_COUNTRY_NAME column?
+	-----------------------------------------------------------------
+	df1.select("DEST_COUNTRY_NAME").distinct().count()
+	df1.dropDuplicates(["DEST_COUNTRY_NAME"]).count()
+
+
+ 14. randomSplit => Spalit the DF into a list of DFs in the specified weights. 
+
+	dfList = df1.randomSplit([0.6, 0.4])
+	dfList = df1.randomSplit([0.6, 0.4], 345)   => 345 is a seed
+
+	print( dfList[0].count(),  dfList[1].count() )
+
+
+ 15. union, intersect, subtract
+
+
+	df2 = df1.where("count > 1000")
+	df2.show()
+	df2.count()   # 14 rows
+	df2.rdd.getNumPartitions()
+
+	df3 = df1.where("DEST_COUNTRY_NAME = 'India'")
+	df3.show()
+	df3.count()   # 1 rows
+	df3.rdd.getNumPartitions()
+
+	df4 = df2.union(df3)
+	df4.rdd.getNumPartitions()
+	df4.show()
+
+	df5 = df4.subtract(df2)   # df4: 2, df2: 1
+	df5.show()
+	df5.rdd.getNumPartitions()
+
+	df6 = df4.intersect(df2)
+	df6.show()
+	df6.rdd.getNumPartitions()
+
+
+  spark.sql.shuffile.partitions
+  -----------------------------
+	=> This config parameter determines the number of shuffle partitions created
+	=> default value is 200
+
+	spark.conf.get("spark.sql.shuffle.partitions")
+	spark.conf.set("spark.sql.shuffle.partitions", "3")
+
+
+ 16. repartition
+
+	df2 = df1.repartition(6)
+	df2.rdd.getNumPartitions()
+
+	df3 = df2.repartition(3)
+	df3.rdd.getNumPartitions()
+
+	df4 = df2.repartition(3, col("DEST_COUNTRY_NAME"))
+	df4.rdd.getNumPartitions()
+
+	df5 = df2.repartition(col("DEST_COUNTRY_NAME"))
+	df5.rdd.getNumPartitions()
+
+
+ 17. coalesce
+
+	df6 = df5.coalesce(3)
+	df6.rdd.getNumPartitions()
+
+
+ 18. join 
+
+
+
+  Joins
+  -----
+	Supported Joins: inner, left, right, full, left_semi, left_anti, cross
+
+
+	left_semi Join
+	--------------
+	Is similar to inner join but the data is fetched only from the left table.
+
+	Equivalent to the following sub-query:
+	
+	     select * from emp where deptid in (select id from dept)
+
+
+	left_anti Join
+	--------------
+	Equivalent to the following sub-query:
+	
+	     select * from emp where deptid not in (select id from dept)
+
+
+	SQL Way
+	-------
+	employee = spark.createDataFrame([
+		(1, "Raju", 25, 101),
+		(2, "Ramesh", 26, 101),
+		(3, "Amrita", 30, 102),
+		(4, "Madhu", 32, 102),
+		(5, "Aditya", 28, 102),
+		(6, "Pranav", 28, 100)])\
+	  .toDF("id", "name", "age", "deptid")
+	  
+	department = spark.createDataFrame([
+		(101, "IT", 1),
+		(102, "ITES", 1),
+		(103, "Opearation", 1),
+		(104, "HRD", 2)])\
+	  .toDF("id", "deptname", "locationid")
+
+	employee.show()
+	department.show()
+
+	spark.catalog.listTables()
+
+	employee.createOrReplaceTempView("emp")
+	department.createOrReplaceTempView("dept")
+
+	qry = """select emp.*, dept.*
+		 from emp join dept
+		 on emp.deptid = dept.id"""
+
+	joinedDf = spark.sql(qry)
+
+	joinedDf.show()
+
+
+	DF Transformation method
+        ------------------------
+	joinCol = employee.deptid == department.id
+	joinedDf = employee.join(department, joinCol, "full")
+	joinedDf.show()
+
+
+  Use-Case
+  --------
+
+   datasets: https://github.com/ykanakaraju/pyspark/tree/master/data_git/movielens
+
+   From movies.csv and ratings.csv files, fetch the top 10 movies with heighest average user rating.
+	-> Consider only those movies with atleast 30 ratings
+	-> Data: movieId, title, totalRatings, averageRating
+	-> Arrange the data in the DESC order of averageRating
+	-> Save the output as a single pipe-separated CSV file with header. 
+	-> Use DF transformation methods only.
+
+
+
+
+
+
+
+
+
+
+
 
 
 
