@@ -118,7 +118,6 @@
 		-> the status of tasks are reported to the driver. 
 
 
-
    RDD (Resilient Distributed Dataset)
    -----------------------------------
 
@@ -193,24 +192,113 @@
 
 
 
+  Types of RDD Transformation
+  ---------------------------
+
+    Two types:
+
+	 1. Narrow Transformations
+
+           -> Narrow transformations are those, where the computation of each partition depends ONLY
+              on its input partition.
+           -> There is no shuffling of data.
+           -> Simple and efficient
+
+
+      	2. Wide Transformations
+
+           -> In wide transformations, the computation of a single partition depends on all/many
+              partitions of its input RDD.
+           -> Data shuffle across partitions will happen.
+           -> Complex and expensive
+
+
+
+  RDD Persistence
+  ---------------
+
+	rdd1 = sc.textFile(<file>, 4)
+	rdd2 = rdd1.t2(..)
+	rdd3 = rdd1.t3(..)
+	rdd4 = rdd3.t4(..)
+	rdd5 = rdd3.t5(..)
+	rdd6 = rdd5.t6(..)
+	rdd6.persist( StorageLevel.MEMORY_AND_DISK )  --> instruction to Spark to save rdd6 partitions
+	rdd7 = rdd6.t7(..)
+
+	rdd6.collect()
+	Lineage of rdd6 => (4) rdd6 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+		[sc.textFile -> t3 -> t5 -> t6 ] --> collect
+	
+	rdd7.collect()
+	Lineage of rdd6 => (4) rdd7 -> rdd6.t7 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+		[ t7 ] --> collect
+
+
+	StorageLevels
+        -------------
+	MEMORY_ONLY		-> default, Memory Serialized 1x Replicated
+	MEMORY_AND_DISK		-> Disk Memory Serialized 1x Replicated
+	DISK_ONLY		-> Disk Serialized 1x Replicated
+	MEMORY_ONLY_2		-> Memory Serialized 2x Replicated
+	MEMORY_AND_DISK_2	-> Disk Memory Serialized 2x Replicated	
+
+
+	Commands
+	---------
+
+	rdd1.persist()    -> in-memory persistence
+	rdd1.cache()      -> in-memory persistence
+	rdd1.persist( StorageLevel.DISK_ONLY )
+
+	rdd1.unpersist()
+		
+
+   Spark Executor Memory Structure
+   -------------------------------
+     
+      Let us say we are requesting an executor with 10 GB RAM. 
+      The spark job will be allocated executors with 10.3 GB (10GB + 300MB) RAM. 
+     
+      
+      1. Reserved Memory (300 MB)
+           -> Spark's internal usage
+      
+      2. Spark Memory (spark.memory.fraction: 0.6)   => 6 GB (Unified Memory)
+          
+         2.1  Execution Memory
+                 -> Used for RDD partition creationg and transformation
+                 -> Can forcibly evict RDD partitions from storage memory if it requires
+                    additional upto the quote allocated for it.
+
+         2.2  Storage Memory (spark.memory.storageFraction: 0.5) => 3 GB
+                 -> The RDD partitions and broadcast variables are persisted
+                    in this memory.
+
+      3. User Memory  => 4 GB
+         -> Running non-spark related code execution. 
+         -> Related to running python methods, storing python collection.
+
+
+
   RDD Transformations
   -------------------
 
-    1. map		P: U -> V
+  1. map		P: U -> V
 			object to object transformation
 			input RDD: N objects, output RDD: N objects
 
 	rddFile.map(lambda x: len(x.split())).collect()
 
 
-   2. filter		P: U -> Boolean
+  2. filter		P: U -> Boolean
 			Objects for which the function returns True will be in the output RDD
 			input RDD: N objects, output RDD: <= N objects
 
 	rddFile.filter(lambda x: len(x.split(" ")) > 8).collect()
 
 
-   3. glom		P: None
+  3. glom		P: None
 			Return one list object per partition with all the objects of that partition.
 
 		rdd1			rdd2 = rdd1.glom()
@@ -221,9 +309,97 @@
 		rdd1.count() = 18 (int)	   rdd2.count() = 3 (list)
 
 
-   4. flatMap		P: U -> Iterable[V]
+  4. flatMap		P: U -> Iterable[V]
 			fatMap flattens the iterables produced by the function.
 			input RDD: N objects, output RDD: >= N objects
 
 		rddWords = rddFile.flatMap(lambda x: x.split(" "))
+
+
+  5. mapPartitions	P: Iterable[U] -> Iterable[V]
+			partition to partition transformation
+
+		rdd1.mapPartitions(lambda p: map(lambda x: x*10, p) ).collect()
+		rdd1.mapPartitions(lambda p: [sum(p)] ).collect()
+
+
+  6. mapPartitionsWithIndex   P: Int, Iterable[U] -> Iterable[V]
+			Similar to mapPartitions, but we get the partition index as an additional parameter.
+
+		rdd1 \
+		.mapPartitionsWithIndex(lambda i,p: map(lambda x: (i, x), p)) \
+		.filter(lambda x: x[0] == 1) \
+		.map(lambda x: x[1]) \
+		.collect()
+
+  Types of RDDs
+  -------------
+
+	Generic RDDs: RDD[U]            
+	Pair RDD: RDD[(K, V)]	
+	
+
+ 7. mapValues		P: U -> V			
+			Applied only on Pair RDD
+			Applies the function only to the 'value' part of the key-value pairs
+
+		rddPairs.mapValues(lambda x: x*10).collect()
+		-> In the above fn, x represents only the 'value' part of key-value pairs
+
+
+ 8. distinct		P: None, Optional: numPartitions
+			Returns distinct objects of the RDD.
+
+		rddWords.distinct().collect()
+
+
+  9. sortBy		P: U -> V,  Optional: ascending (True/False), numPartitions
+			Sorts the objects of RDD based on the function output that they generate.
+
+		rdd1.sortBy(lambda x: x%2).glom().collect()
+		rdd1.sortBy(lambda x: x%2, False).glom().collect()
+		rdd1.sortBy(lambda x: x%2, True, 2).glom().collect()
+
+
+  10. groupBy		P: U -> V, Optional: numPartitions
+			Returns a Pair RDD where
+				key: Each unique value of the function output
+				value: ResultIterable object contained grouped values
+
+		rddWc = sc.textFile("E:\\Spark\\wordcount.txt", 12) \
+        		.flatMap(lambda x: x.split()) \
+        		.groupBy(lambda x: x) \
+        		.mapValues(len) \
+        		.sortBy(lambda x: x[1], False, 1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
