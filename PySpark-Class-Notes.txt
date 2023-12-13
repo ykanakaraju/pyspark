@@ -280,7 +280,6 @@
          -> Related to running python methods, storing python collection.
 
 
-
   RDD Transformations
   -------------------
 
@@ -347,7 +346,7 @@
 		-> In the above fn, x represents only the 'value' part of key-value pairs
 
 
- 8. distinct		P: None, Optional: numPartitions
+  8. distinct		P: None, Optional: numPartitions
 			Returns distinct objects of the RDD.
 
 		rddWords.distinct().collect()
@@ -366,6 +365,8 @@
 				key: Each unique value of the function output
 				value: ResultIterable object contained grouped values
 
+			CAUTION: Avoid 'groupByKey' if possible.
+
 		rddWc = sc.textFile("E:\\Spark\\wordcount.txt", 12) \
         		.flatMap(lambda x: x.split()) \
         		.groupBy(lambda x: x) \
@@ -373,16 +374,159 @@
         		.sortBy(lambda x: x[1], False, 1)
 
 
+  11. repartition	P: numPartitions
+			Is used to increase or decrease the number of output partitions	
+			Global shuffle	
+
+			
+		rdd2 = rdd1.repartition(5)
+
+
+  12. coalesce		P: numPartitions
+			Is used to only decrease the number of output partitions	
+			Partition merging
+
+
+		rdd2 = rdd1.coalesce(5)
+
+
+		Recommendations
+		---------------
+		-> The size of each partition should be between 100 MB to 1 GB
+		   (Ideally 128 MB if you are running on Hadoop)
+		-> The number of partitions should be a multiple of number of cores
+		-> The number of cores per executor should be 5
 
 
 
+  13. partitionBy	P: numPartitions, Optional: partition-function (default: hash)
+			Applied only on Pair RDDs
+			Controls which keys go to which partition based on partition-function applied to keys.
+           
+
+  		rdd4 = rdd1.map(lambda x: (x, 1)).partitionBy(3).map(lambda x: x[0])
+
+	
+  ..ByKey Transformations
+  -----------------------
+	=> Are wide transformations
+	=> Applied on Pair RDDs only
+	
+
+  14. sortByKey		P: None, Optional: ascending (True/False), numPartitions
+			Sorts the data based on the keys.
+
+			rddPairs.sortByKey().glom().collect()
+			rddPairs.sortByKey(False).glom().collect()
+			rddPairs.sortByKey(False, 3).glom().collect()
+
+
+  15. groupByKey	P: None, Optional: numPartitions
+			Returns a Pair RDD where:
+				key: Unique keys of the RDD
+				value: ResultIterable. Grouped values
+
+			CAUTION: avoid groupByKey if possible. 
+
+		rddWc = sc.textFile("E:\\Spark\\wordcount.txt", 1) \
+        		.flatMap(lambda x: x.split()) \
+        		.map(lambda x: (x, 1)) \
+        		.groupByKey() \
+        		.mapValues(sum) \
+        		.sortBy(lambda x: x[1], False)
+
+
+  16. reduceByKey	P: (U, U) -> U
+			Reduce all the values of each key by iterativly applying the reduce function.
+			
+		rddWc = sc.textFile("E:\\Spark\\wordcount.txt", 1) \
+        		.flatMap(lambda x: x.split()) \
+        		.map(lambda x: (x, 1)) \
+        		.reduceByKey(lambda x, y: x + y) \
+        		.sortBy(lambda x: x[1], False)
+
+
+ RDD Actions
+ -----------
+
+  1. collect
+
+  2. count
+
+  3. saveAsTextFile
+
+  4. reduce		P: (U, U) -> U
+			Reduces an entire RDD to one object by iterativly applying the function first on
+			each partition and then across the reduced values of all partitions. 	
+		
+		rdd1									
+	     	P0: 3, 4, 5, 6, 3, 2, 1, 4, 3, 5  	-> reduce -> -30 -> reduce -> 62
+		P1: 6, 7, 8, 9, 0, 8, 9, 0, 8, 9  	-> reduce -> -52
+		P2: 0, 3, 4, 2, 1, 3, 2, 4, 3, 5, 6, 7  -> reduce -> -40
+
+		rdd1.reduce(lambda x, y: x - y) 
+
+  
+  5. take(n)
+
+		rdd1.take(10)  -> returns a list of first 10 objects
+
+
+  6. takeOrdered(n, [fn])
+
+		rddWords.takeOrdered(20)
+		rddWords.takeOrdered(20, len)
+
+
+  7. takeSample(withReplacement, n, [seed])
+
+		with-replacement sampling
+			rdd1.takeSample(True, 10)
+			rdd1.takeSample(True, 10, 45645)    # 45645 is a seed
+
+		without-replacement sampling
+			rdd1.takeSample(False, 10)
+			rdd1.takeSample(False, 10, 45645)   # 45645 is a seed
+
+
+  8. countByValue
+
+
+  9. countByKey
+
+
+  10. foreach	  => P: function;
+		  Returns nothing. 
+		  Executes the function on all objects of the RDD.
+
+
+  11. saveAsSequenceFile => Sequence File is Hadoop file format that stores key-value pairs.
 
 
 
+   Use Case
+   ---------
+		
+    dataset: https://github.com/ykanakaraju/pyspark/blob/master/data_git/cars.tsv
+
+	From cars.tsv dataset, get the average weight of all the models of each make of American origin cars. 
+	-> Arrange in the DESC order of average weight. 
+        -> Save the output as a single text file. 
+
+	-> Try it yourself...
 
 
+   Spark-submit
+   ------------
+
+     -> Is a single command to submit any spark application (Python, Scala, Java, R) to any cluster
+        manager (local, spark standalone, YARN, mesos, kubernetes)
 
 
+ 	spark-submit [options] <app jar | python file | R file> [app arguments]
+
+	spark-submit --master local E:\PySpark\spark_core\examples\wordcount.py
+	spark-submit --master local E:\PySpark\spark_core\examples\wordcount_cmdargs.py sampletext.txt wcout2 1
 
 
 
