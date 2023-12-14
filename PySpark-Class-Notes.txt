@@ -198,7 +198,6 @@
     Two types:
 
 	 1. Narrow Transformations
-
            -> Narrow transformations are those, where the computation of each partition depends ONLY
               on its input partition.
            -> There is no shuffling of data.
@@ -206,7 +205,6 @@
 
 
       	2. Wide Transformations
-
            -> In wide transformations, the computation of a single partition depends on all/many
               partitions of its input RDD.
            -> Data shuffle across partitions will happen.
@@ -529,6 +527,298 @@
 	spark-submit --master local E:\PySpark\spark_core\examples\wordcount_cmdargs.py sampletext.txt wcout2 1
 
 
+  Spark Closure
+  -------------
+
+	In spark, a closure constitute all the code (variables and methods) that must be visible inside an
+        executor to the task to perform their computations on RDD partitions. 
+
+	Spark serializes the closure and separate copy of it is sent to every executor. 
+
+
+	c = 0
+
+	def is_prime(n):
+	   return True if n is a prime number
+	   else return False
+
+	def f1(n):
+	   global c
+	   if (is_prime(n)):
+		c += 1
+	   return n*10
+
+	rdd1 = sc.parallelize( range(1, 4001), 4 )
+	rdd2 = rdd1.map( f1 )
+
+	rdd2.collect()
+
+	print(c)	# 0
+
+
+	Limitation: We can not use local variable to implement global counter.
+	Solution: Use 'Accumulator' varibale to implement global counter.
+
+  
+  
+  Spark Shared Variables
+  ----------------------
+    1. Accumulator
+	-> Is a shared variable, not part of a closure
+	-> Not a local copy
+	-> One variable maintained by the driver
+	-> All tasks can add to this variable (the driver copy is updated)
+	-> Is used to implement "global counter"
+
+
+	c = sc.accumulator(0)
+
+	def is_prime(n):
+	   return True if n is a prime number
+	   else return False
+
+	def f1(n):
+	   global c
+	   if (is_prime(n)):
+		c.add(1)
+	   return n*10
+
+	rdd1 = sc.parallelize( range(1, 4001), 4 )
+	rdd2 = rdd1.map( f1 )
+
+	rdd2.collect()
+
+	print(c)	# 0
+
+
+
+  2. Broadcast variable
+
+
+	bc = sc.broadcast({1:a, 2:b, 3:c, 4:d, 5:e, 6:f, 7:g, ......})    #100 MB
+
+	def f1(n):
+	   global bc
+	   return bc.value[n]
+
+	rdd1 = sc.parallelize([1,2,3,4,5,6,....], 4)
+	rdd2 = rdd1.map(f1)
+	rdd2.collect()
+
+
+
+  
+  RDD Execution Flow
+  ------------------
+
+	Application (ex: PySpark Shell or You App in Spyder/PyCharm)
+	|
+	|--> Jobs (Each action command launches one job)
+		|
+		|--> Stages (one or more stages per Job; wide transformation causes stage transition)
+			|
+			|--> Tasks (one task per partition of the RDD in that stage)
+				|
+				|--> Transformations (one or more transformations per task)	
+
+
+
+  ==============================
+     Spark SQL
+  ==============================
+
+    -> High-level API built on top of Spark Core.
+
+    -> Spark's structured / semi-structured data processing API
+   
+	File Formats : Parquet (default), ORC, JSON, CSV (delimited text), Text
+	JDBC Format  : RDBMS, NoSQL
+	Hive Format  : Hive Warehouse
+
+    -> SparkSession
+	-> Starting point of execution
+	-> Represents a session inside an application
+	-> Each session can have its own configuration. 
+
+		spark = SparkSession \
+    			.builder \
+    			.appName("Basic Dataframe Operations") \
+    			.config("spark.master", "local[*]") \
+    			.getOrCreate()  
+
+   
+
+    -> DataFrame
+	
+	-> DataFrame is a collection of distributed in-memory partitions that are immutable and lazily evaluated.
+	-> DataFrame is a collection of "Row" objects.
+
+		Data   => Rows
+		Schema => StructType
+
+			StructType(
+			     [
+				StructField('age', LongType(), True), 
+				StructField('gender', StringType(), True), 
+				StructField('name', StringType(), True), 
+				StructField('phone', StringType(), True), 
+				StructField('userid', LongType(), True)	
+			     ]
+			)
+
+
+  Spark SQL Basic Steps
+  ---------------------
+
+    1. Reading/Loading data into a DF	
+
+		df1 = spark.read.format("json").load(inputData)
+		df1 = spark.read.load(inputData, format="json")
+		df1 = spark.read.json(inputData)
+
+    2. Transforming a DF 
+
+		Using DF Transformation methods
+		--------------------------------
+		df2 = df1.select("userid", "name", "age", "gender", "phone") \
+        		.where("age is not null") \
+        		.orderBy("gender", "age") \
+        		.groupBy("age").count() \
+        		.limit(4)
+
+
+		Using SQL
+		---------
+		df1.createOrReplaceTempView("users")
+
+		df3 = spark.sql("""SELECT age, count(1) as count
+        			   FROM users
+        			   WHERE age IS NOT NULL
+        			   GROUP BY gender, age
+        			   ORDER BY gender, age
+        			   LIMIT 4""")
+		display(df3)
+
+		
+    3. Writing/Saving the DF data into some destination
+
+		df2.write.format("json").save(output_path)
+		df2.write.save(output_path, format="json")
+		df2.write.json(output_path)
+
+		df2.write.mode("overwrite").json(output_path)
+
+
+  Save Modes
+  ----------
+	- Define what should happen when you are writing to an existing directory
+  		- ErrorIfExists (default)
+  		- Ignore
+  		- Append   (appends additional files to the existing directory)
+  		- Overwrite (overwrites old directory)
+
+
+	df3.write.mode("append").format("json").save("dbfs:/FileStore/output/json")
+	df3.write.mode("overwrite").format("json").save("dbfs:/FileStore/output/json")
+	df3.write.format("json").save("dbfs:/FileStore/output/json", mode="append")
+
+		
+  LocalTempViews & GlobalTempViews
+  --------------------------------
+	LocalTempView 
+	   -> Local to a specific SparkSession
+	   -> Created using createOrReplaceTempView command
+		df1.createOrReplaceTempView("users")
+
+
+	GlobalTempView
+	   -> Can be accessed from multiple SparkSessions within the application
+	   -> Tied to "global_temp" database
+	   -> Access the table using global_temp.<table-name>
+	   -> Created using createOrReplaceGlobalTempView command
+		df1.createOrReplaceGlobalTempView("gusers")
+
+
+   DataFrame Transformations
+   -------------------------
+
+
+  1. select
+
+
+  2. where / filter
+
+
+  3. orderBy
+
+
+  4. groupBy => returns a "pyspark.sql.group.GroupedData" object
+		apply some aggregation function to returns a DataFrame
+
+
+  5. limit
+
+
+
+  Working with different file formats
+  -----------------------------------
+
+  JSON
+	read
+		df1 = spark.read.format("json").load(inputPath)
+		df1 = spark.read.load(inputPath, format="json")
+		df1 = spark.read.json(inputPath)
+
+	write
+		df3.write.format("json").save(outputPath)
+		df3.write.save(outputPath, format="json")
+		df3.write.json(outputPath)	
+
+  Parquet (default)
+	read
+		df1 = spark.read.format("parquet").load(inputPath)
+		df1 = spark.read.load(inputPath, format="parquet")
+		df1 = spark.read.parquet(inputPath)
+
+	write
+		df3.write.format("parquet").save(outputPath)
+		df3.write.save(outputPath, format="parquet")
+		df3.write.parquet(outputPath)
+
+
+   ORC
+	read
+		df1 = spark.read.format("orc").load(inputPath)
+		df1 = spark.read.load(inputPath, format="orc")
+		df1 = spark.read.orc(inputPath)
+
+	write
+		df3.write.format("orc").save(outputPath)
+		df3.write.save(outputPath, format="orc")
+		df3.write.orc(outputPath)
+
+
+   CSV (delimited text)
+
+	read
+		df1 = spark.read.format("csv").option("header", True).option("inferSchema", True).load(inputPath)
+		df1 = spark.read.format("csv").load(inputPath, header=True, inferSchema=True)
+		df1 = spark.read.csv(inputPath, header=True, inferSchema=True)
+		df1 = spark.read.csv(inputPath, header=True, inferSchema=True, sep="|")
+
+	write
+		df3.write.format("csv").save(outputPath, header=True)
+		df2.write.csv(outputPath, header=True)
+		df2.write.csv(outputPath, header=True, sep="|", mode="overwrite")
+
+   Text
+	read
+		df1 = spark.read.text(inputPath)
+		=> df1 will have one columns called 'value' of 'string' type
+
+	write
+		df1.write.text(outputPath)
+		=> You can only save a DF with a single text column in 'text' format.
 
 
 
@@ -541,9 +831,6 @@
 
 
 
-
-
-
-
+  
 
 
