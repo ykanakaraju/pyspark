@@ -644,12 +644,9 @@
     			.builder \
     			.appName("Basic Dataframe Operations") \
     			.config("spark.master", "local[*]") \
-    			.getOrCreate()  
+    			.getOrCreate()     
 
-   
-
-    -> DataFrame
-	
+    -> DataFrame	
 	-> DataFrame is a collection of distributed in-memory partitions that are immutable and lazily evaluated.
 	-> DataFrame is a collection of "Row" objects.
 
@@ -672,6 +669,8 @@
 
     1. Reading/Loading data into a DF	
 
+
+		inputData = "/FileStore/flight-data/json/2015_summary.json"
 		df1 = spark.read.format("json").load(inputData)
 		df1 = spark.read.load(inputData, format="json")
 		df1 = spark.read.json(inputData)
@@ -714,7 +713,7 @@
 	- Define what should happen when you are writing to an existing directory
   		- ErrorIfExists (default)
   		- Ignore
-  		- Append   (appends additional files to the existing directory)
+  		- Append    (appends additional files to the existing directory)
   		- Overwrite (overwrites old directory)
 
 
@@ -745,24 +744,210 @@
 
   1. select
 
+	df2 = df1.select("ORIGIN_COUNTRY_NAME", "DEST_COUNTRY_NAME", "count")
+
+
+	df2 = df1.select( col("ORIGIN_COUNTRY_NAME").alias("origin"),
+                  col("DEST_COUNTRY_NAME").alias("destination"),
+                  expr("count").cast("int"),
+                  expr("count + 10 as newCount"),
+                  expr("count > 200 as highFrequecy"),
+                  expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME as domestic"))
+
 
   2. where / filter
 
+	df3 = df2.where("domestic = false and count > 1000")
+	df3 = df2.filter("domestic = false and count > 1000")
 
-  3. orderBy
+	df3 = df2.filter( col("count") > 1000 )
 
 
-  4. groupBy => returns a "pyspark.sql.group.GroupedData" object
-		apply some aggregation function to returns a DataFrame
+  3. orderBy / sort
 
+	df3 = df2.orderBy("count", "origin")
+	df3 = df2.orderBy(desc("count"), asc("origin"))
+	df3 = df2.sort(desc("count"), asc("origin"))
+
+
+  4. groupBy  => returns a pyspark.sql.group.GroupedData object. Use an aggregation function to return a DataFrame.
+	
+	df3 = df2.groupBy("highFrequecy", "domestic").count()
+	df3 = df2.groupBy("highFrequecy", "domestic").sum("count")
+	df3 = df2.groupBy("highFrequecy", "domestic").max("count")
+	df3 = df2.groupBy("highFrequecy", "domestic").avg("count")
+
+	df3 = df2.groupBy("highFrequecy", "domestic") \
+        	.agg( count("count").alias("count"),
+              		sum("count").alias("sum"),
+              		max("count").alias("max"),
+              		round(avg("count"), 2).alias("avg")
+            	  )
 
   5. limit
+
+	df2 = df1.limit(10)
+
+
+  6. selectExpr
+
+	df2 = df1.selectExpr("DEST_COUNTRY_NAME as destination", 
+                     "ORIGIN_COUNTRY_NAME as origin",
+                     "count",
+                     "count + 10 as newCount",
+                     "count > 200 as highFrequency",
+                     "DEST_COUNTRY_NAME = ORIGIN_COUNTRY_NAME as domestic")
+
+	df2.show()
+	df2.printSchema()
+
+
+  7. withColumn & withColumnRenamed
+
+	df3 = df1.withColumn("newCount", expr("count + 10")) \
+         	.withColumn("highFrequency", expr("count > 200")) \
+         	.withColumn("domestic", expr("DEST_COUNTRY_NAME = ORIGIN_COUNTRY_NAME")) \
+         	.withColumnRenamed("DEST_COUNTRY_NAME", "destination") \
+         	.withColumnRenamed("ORIGIN_COUNTRY_NAME", "origin") \
+            	.withColumn("countryCode", lit(91))
+
+	df3.show(5)
+
+        ---------------------
+
+	df4 = df3.withColumn("ageGroup", when(expr("age < 13"), "child")
+                                .when(expr("age < 20"), "teenager")
+                                .when(expr("age < 60"), "adult")
+                                .otherwise("senior") )
+
+	df4.show()
+
+
+   8.  udf (user defined function)
+
+		def getAgeGroup( age ):
+			if (age <= 12):
+				return "child"
+			elif (age >= 13 and age <= 19):
+				return "teenager"
+			elif (age >= 20 and age < 60):
+				return "adult"
+			else:
+				return "senior"
+
+		get_age_group = udf(getAgeGroup, StringType())
+
+		df4 = df3.withColumn("ageGroup", get_age_group(col("age")) )
+
+		df4.show()
+
+		----------------------------------------
+
+		@udf (returnType = StringType())
+		def getAgeGroup( age ):
+			if (age <= 12):
+				return "child"
+			elif (age >= 13 and age <= 19):
+				return "teenager"
+			elif (age >= 20 and age < 60):
+				return "adult"
+			else:
+				return "senior"
+
+		df4 = df3.withColumn("ageGroup", getAgeGroup(col("age")) )
+	
+		--------------------------------------------
+		# applying UDF in SQL
+
+		def getAgeGroup( age ):
+			if (age <= 12):
+				return "child"
+			elif (age >= 13 and age <= 19):
+				return "teenager"
+			elif (age >= 20 and age < 60):
+				return "adult"
+			else:
+				return "senior"
+
+
+		spark.udf.register("get_age_group", getAgeGroup, StringType())
+		
+		spark.catalog.listFunctions()
+
+		qry = "select id, name, age, get_age_group(age) as ageGroup from users"
+
+		df5 = spark.sql(qry)
+		df5.show()
+
+   9. drop	=> drops/excludes the specified columns
+
+
+		df3 = df2.drop("newCount", "highFrequency")
+
+		df3.printSchema()
+		df3.show(4)
+
+
+   10. dropna	=> drops the Rows that has null values in any column or specified columns
+
+		usersDf = spark.read.json("E:\\PySpark\\data\\users.json")
+		usersDf.show()
+
+		df3 = usersDf.dropna()  # drop rows if there is null in any column
+		df3 = usersDf.dropna(subset=["phone", "age"])  # drop rows if there is null in phone or age columns
+
+		df3.show()
+
+
+   11. dropDuplicates => drop duplicates based on any column or specified columns
+
+
+		listUsers = [(1, "Raju", 5),
+					 (1, "Raju", 5),
+					 (3, "Raju", 5),
+					 (4, "Raghu", 35),
+					 (4, "Raghu", 35),
+					 (6, "Raghu", 35),
+					 (7, "Ravi", 70)]
+
+		df3 = spark.createDataFrame(listUsers, ["id", "name", "age"])
+		df3.show()
+
+		df4 = df3.dropDuplicates()
+		df4 = df3.dropDuplicates(["name","age"])
+
+		df4.show()
+
+   12. distinct => returns distinct rows
+
+		listUsers = [(1, "Raju", 5),
+					 (1, "Raju", 5),
+					 (3, "Raju", 5),
+					 (4, "Raghu", 35),
+					 (4, "Raghu", 35),
+					 (6, "Raghu", 35),
+					 (7, "Ravi", 35)]
+
+
+		df3 = spark.createDataFrame(listUsers, ["id", "name", "age"])
+		df3.show()
+
+		df4 = df3.distinct()
+		df4.show() 
+
+
+		# How many unique DEST_COUNTRY_NAMEs are there ??
+		df1.select("DEST_COUNTRY_NAME").distinct().count()
+		df1.dropDuplicates(["DEST_COUNTRY_NAME"]).count()	
+
+
+
+
 
 
 
   Working with different file formats
   -----------------------------------
-
   JSON
 	read
 		df1 = spark.read.format("json").load(inputPath)
@@ -822,15 +1007,80 @@
 
 
 
+  Creating an RDD from DataFrame
+  ------------------------------
+	rdd1 = df1.rdd
 
 
+  Creating a DataFrame from an RDD
+  --------------------------------
+	listUsers = [(1, "Raju", 5),
+		(2, "Ramesh", 15),
+		(3, "Rajesh", 18),
+		(4, "Raghu", 35),
+		(5, "Ramya", 25),
+		(6, "Radhika", 35),
+		(7, "Ravi", 70)]
+
+	rdd1 = spark.sparkContext.parallelize(listUsers)
+
+	df1 = rdd1.toDF(["id", "name", "age"])
+
+	df1.show()
+	df1.printSchema()
 
 
+  Creating a DataFrame from programmatic data
+  --------------------------------------------
+	listUsers = [(1, "Raju", 5),
+		(2, "Ramesh", 15),
+		(3, "Rajesh", 18),
+		(4, "Raghu", 35),
+		(5, "Ramya", 25),
+		(6, "Radhika", 35),
+		(7, "Ravi", 70)]
 
-
-
-
+	df1 = spark.createDataFrame(listUsers, ["id", "name", "age"])
+	df1 = spark.createDataFrame(listUsers).toDF("id", "name", "age")
 
   
+  Create a DataFrame with programmatic schema
+  -------------------------------------------
+
+	mySchema = "id INT, name STRING, age INT"
+	df1 = spark.createDataFrame(listUsers, schema=mySchema)
+
+	------------------------
+
+	mySchema = StructType([
+            StructField("id", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("age", IntegerType(), True)
+        ])
+	df1 = spark.createDataFrame(listUsers, schema=mySchema)
+   
+	--------------------
+
+	mySchema = StructType([
+            StructField("ORIGIN_COUNTRY_NAME", StringType(), True),
+            StructField("DEST_COUNTRY_NAME", StringType(), True),
+            StructField("count", IntegerType(), True)
+        ])
+
+	df1 = spark.read.schema(mySchema).json(inputPath)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
