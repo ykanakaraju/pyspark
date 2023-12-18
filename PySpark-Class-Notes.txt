@@ -738,9 +738,8 @@
 		df1.createOrReplaceGlobalTempView("gusers")
 
 
-   DataFrame Transformations
-   -------------------------
-
+ DataFrame Transformations
+ -------------------------
 
   1. select
 
@@ -941,9 +940,59 @@
 		df1.dropDuplicates(["DEST_COUNTRY_NAME"]).count()	
 
 
+   13. union, intersect, subtract
+
+		df4 = df2.union(df3)
+		df4.show()
+		df4.count()
+		df4.rdd.getNumPartitions()
+		df4.write.mode("overwrite").csv("E:\\PySpark\\output\\union")
+
+		df5 = df4.intersect(df3)
+		df5.show()
+		df5.rdd.getNumPartitions()
+
+		df6 = df4.subtract(df3)
+		df6.show()
+		df6.rdd.getNumPartitions()
 
 
+   14. repartition
+	 -> Is used to increase or decrease the number of partitions of the output DF
+	 -> Causes global shuffle
 
+		df2 = df1.repartition(6)
+		df2.rdd.getNumPartitions()
+
+		df3 = df2.repartition(3)
+		df3.rdd.getNumPartitions()
+
+		df4 = df2.repartition(3, col("DEST_COUNTRY_NAME"))
+		df4.rdd.getNumPartitions()
+
+
+   15. coalesce
+	 -> Is used to only decrease the number of partitions of the output DF
+	 -> Causes partition merging
+
+		df5 = df2.coalesce(3)
+		df5.rdd.getNumPartitions()
+
+   16. join
+
+
+  Use Case
+  ---------
+	Datasets: movies.csv & ratings.csv
+	URL: https://github.com/ykanakaraju/pyspark/tree/master/data_git/movielens
+
+	From movies & ratings files, find the top 10 movies with highest average user rating
+	-> Consider only those movies that are rated by atleast 50 users
+	-> data:  movieId, title, totalRatings, averageRating
+	-> Sort the data in the DESC order of averageRating
+	-> Save the data as a single pipe-separated CSV file with header. 
+
+	Use only DF transformation methods approach (not SQL)
 
 
   Working with different file formats
@@ -1004,7 +1053,6 @@
 	write
 		df1.write.text(outputPath)
 		=> You can only save a DF with a single text column in 'text' format.
-
 
 
   Creating an RDD from DataFrame
@@ -1068,6 +1116,227 @@
         ])
 
 	df1 = spark.read.schema(mySchema).json(inputPath)
+
+
+JDBC Format - Working with MySQL
+  --------------------------------
+import os
+import sys
+
+# setup the environment for the IDE
+os.environ['SPARK_HOME'] = '/home/kanak/spark-2.4.7-bin-hadoop2.7'
+os.environ['PYSPARK_PYTHON'] = '/usr/bin/python'
+
+sys.path.append('/home/kanak/spark-2.4.7-bin-hadoop2.7/python')
+sys.path.append('/home/kanak/spark-2.4.7-bin-hadoop2.7/python/lib/py4j-0.10.7-src.zip')
+
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder \
+            .appName("JDBC_MySQL") \
+            .config('spark.master', 'local') \
+            .getOrCreate()
+  
+qry = "(select emp.*, dept.deptname from emp left outer join dept on emp.deptid = dept.deptid) emp"
+                  
+df_mysql = spark.read \
+            .format("jdbc") \
+            .option("url", "jdbc:mysql://localhost/sparkdb?autoReConnect=true&useSSL=false") \
+            .option("driver", "com.mysql.jdbc.Driver") \
+            .option("dbtable", qry)  \
+            .option("user", "root") \
+            .option("password", "kanakaraju") \
+            .load()
+                
+df_mysql.show()  
+
+spark.catalog.listTables()
+
+df2 = df_mysql.filter("age > 30").select("id", "name", "age", "deptid")
+
+df2.show()   
+
+df2.printSchema()    
+
+df2.write.format("jdbc") \
+    .option("url", "jdbc:mysql://localhost/sparkdb?autoReConnect=true&useSSL=false") \
+    .option("driver", "com.mysql.jdbc.Driver") \
+    .option("dbtable", "emp2")  \
+    .option("user", "root") \
+    .option("password", "kanakaraju") \
+    .mode("overwrite") \
+    .save()      
+                                     
+spark.stop()
+
+
+
+  Working with Hive
+  -----------------
+
+# -*- coding: utf-8 -*-
+import findspark
+findspark.init()
+
+from os.path import abspath
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import desc, avg, count
+
+warehouse_location = abspath('spark-warehouse')
+
+spark = SparkSession \
+    .builder \
+    .appName("Datasorces") \
+    .config("spark.master", "local") \
+    .config("spark.sql.warehouse.dir", warehouse_location) \
+    .enableHiveSupport() \
+    .getOrCreate()
+    
+spark.catalog.listTables()  
+
+spark.catalog.currentDatabase()
+spark.catalog.listDatabases()
+
+spark.sql("show databases").show()
+
+spark.sql("drop database sparkdemo cascade")
+spark.sql("create database if not exists sparkdemo")
+spark.sql("use sparkdemo")
+
+spark.catalog.listTables()
+spark.catalog.currentDatabase()
+
+spark.sql("DROP TABLE IF EXISTS movies")
+spark.sql("DROP TABLE IF EXISTS ratings")
+spark.sql("DROP TABLE IF EXISTS topRatedMovies")
+    
+createMovies = """CREATE TABLE IF NOT EXISTS 
+         movies (movieId INT, title STRING, genres STRING) 
+         ROW FORMAT DELIMITED 
+         FIELDS TERMINATED BY ','"""
+    
+loadMovies = """LOAD DATA LOCAL INPATH 'E:/PySpark/data/movielens/moviesNoHeader.csv' 
+         OVERWRITE INTO TABLE movies"""
+    
+createRatings = """CREATE TABLE IF NOT EXISTS 
+         ratings (userId INT, movieId INT, rating DOUBLE, timestamp LONG) 
+         ROW FORMAT DELIMITED 
+         FIELDS TERMINATED BY ','"""
+    
+loadRatings = """LOAD DATA LOCAL INPATH 'E:/PySpark/data/movielens/ratingsNoHeader.csv' 
+         OVERWRITE INTO TABLE ratings"""
+         
+spark.sql(createMovies)
+spark.sql(loadMovies)
+spark.sql(createRatings)
+spark.sql(loadRatings)
+    
+spark.catalog.listTables()
+     
+#Queries are expressed in HiveQL
+
+moviesDF = spark.sql("SELECT * FROM movies")
+ratingsDF = spark.sql("SELECT * FROM ratings")
+
+moviesDF.show()
+ratingsDF.show()
+           
+summaryDf = ratingsDF \
+            .groupBy("movieId") \
+            .agg(count("rating").alias("ratingCount"), avg("rating").alias("ratingAvg")) \
+            .filter("ratingCount > 25") \
+            .orderBy(desc("ratingAvg")) \
+            .limit(10)
+              
+summaryDf.show()
+    
+joinStr = summaryDf["movieId"] == moviesDF["movieId"]
+    
+summaryDf2 = summaryDf.join(moviesDF, joinStr) \
+                .drop(summaryDf["movieId"]) \
+                .select("movieId", "title", "ratingCount", "ratingAvg") \
+                .orderBy(desc("ratingAvg")) \
+                .coalesce(1)
+    
+summaryDf2.show()
+ 
+summaryDf2.write \
+   .mode("overwrite") \
+   .format("hive") \
+   .saveAsTable("topRatedMovies")
+   
+   
+spark.catalog.listTables()
+        
+topRatedMovies = spark.sql("SELECT * FROM topRatedMovies")
+topRatedMovies.show() 
+    
+spark.catalog.listFunctions()  
+  
+spark.stop()
+
+
+ ===========================================
+   Spark Streaming (Structured Streaming) 
+ ===========================================
+
+   Spark Streaming APIs:
+
+	-> Spark Streaming (DStreams API) built on top of Spark Core
+		-> pyspark.streaming
+		-> Old & legacy API
+
+	-> Structured Streaming built on top of Spark SQL 
+		-> pyspark.sql.streaming
+		-> Current and preferred API
+
+  Notes:
+
+  The key idea in Structured Streaming is to treat a live data stream as a table that is being 
+  continuously appended.
+
+  You express your streaming computation as standard batch-like query as on a static table, 
+  and Spark runs it as an incremental query on the unbounded input table.
+
+  Programming Model
+  -----------------
+	A query on the input will generate the “Result Table”.
+
+	Every trigger interval (say, every 1 second), new rows get appended to the Input Table, 
+	which eventually updates the Result Table.
+
+	Whenever the result table gets updated, we would want to write the changed result rows 
+	to an external sink.
+
+	Structured Streaming does not materialize the entire table.
+
+	It reads the latest available data, processes it incrementally to update the result, and 
+	then discards the source data.
+
+	Spark is responsible for updating the Result Table when there is new data, thus relieving 
+	the users from reasoning about fault-tolerance and data consistency.
+
+
+  Sources
+  -------
+
+	Socket Stream (host & port)	
+	File Stream (directory) => text, csv, json, parquet, orc
+	Rate stream
+	Kafka Stream
+
+
+  Sinks
+  -----
+
+	Console Sink
+	File Sinks  (directory) => text, csv, json, parquet, orc
+	Kafka sink
+	ForEachBatch sink
+	ForEach sink 
+	Memory sink
+
+
 
 
 
