@@ -387,8 +387,6 @@
 			rddPairs.sortByKey(False).glom().collect()
 			rddPairs.sortByKey(False, 3).glom().collect()	
 
-
-
   12. groupByKey	P: None, Optional: numPartitions
 			Returns a Pair RDD where:
 				key: Unique keys of the RDD
