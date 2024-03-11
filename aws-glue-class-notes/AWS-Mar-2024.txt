@@ -1,0 +1,227 @@
+ 
+  Agenda
+  ---------   
+   1. PySpark & SparkSQL Basics
+   2. AWS Basics & AWS Infra		
+   3. Amazon S3				
+   4. AWS Lambda			
+   5. AWS Glue				
+   6. AWS Athena 			
+   7. Project (CDC)	
+
+
+  Course Materials
+  ----------------
+    -> PDF Presentations
+    -> Code Modules, Instructions, Scripts, Notebooks
+    -> Class Notes
+    -> Github: 	https://github.com/ykanakaraju/pyspark
+		https://github.com/ykanakaraju/aws-cts  
+
+
+  Spark
+  ----- 
+ 
+   -> Spark is an in-memory distributed computing framework for performing big data analytics.
+
+   -> Spark is written in SCALA language
+
+   -> Spark is a polyglot
+	-> Scala, Java, Python, R (and SQL)
+
+   -> Spark has unified stack for data analytics
+
+   -> Spark APIs
+	-> Spark Core API  : Low-level API. Uses RDDs
+	-> Spark SQL	   : Structured/semi-structured data processing (Batch)
+	-> Spark Streaming : DStreams API, Structured streaming
+	-> Spark MLLib	   : Predictive analytics using ML
+	-> Spark GraphX	   : Graph Processing
+
+
+
+  Getting started with Spark
+  --------------------------
+ 
+     ** Databricks Community Edition (free edition)
+ 		
+	Signup: https://www.databricks.com/try-databricks
+		Screen 1: Fill up the details with valid email address
+		Screen 2: Click on "Get started with Community Edition" link (Not the 'Continue' button)
+
+	Login: https://community.cloud.databricks.com/login.html
+
+	Downloading a file from Databricks
+	----------------------------------
+		/FileStore/<FILEPATH>
+		https://community.cloud.databricks.com/files/<FILEPATH>?o=1072576993312365
+
+		Example:
+		dbfs:/FileStore/output/wc/part-00000
+		https://community.cloud.databricks.com/files/output/wc/part-00000?o=1072576993312365
+
+
+	Enabling DBFS File browser
+	--------------------------
+	<your account (top-right)> -> Admin settings -> Advanced -> DBFS File Browser (enable it)
+
+
+
+  Spark SQL
+  ---------
+	  
+       -> High Level API built on top of Spark Core
+
+	File Formats : Parquet (default), ORC, JSON, CSV (delimited text), Text
+	JDBC Format  : RDBMS, NoSQL
+	Hive Format  : Hive Warehouse
+
+
+   SparkSession
+   ------------
+
+	-> Starting point of execution
+	-> Represents a user session (SparkSession) running inside an application (SparkContext)
+	-> Each SparkSession can have its own configuration
+
+	spark = SparkSession \
+    		.builder \
+    		.appName("Basic Dataframe Operations") \
+    		.config("spark.master", "local") \
+    		.getOrCreate()
+
+
+   DataFrame (DF)
+   --------------
+	-> Main data abstraction of Spark SQL
+
+	-> Is a collection of distributed in-memory partitions
+	-> Immutable
+	-> Lazily evaluated
+
+	-> DataFrame is a collection of "Row" objects.
+
+	-> DataFrame contains two components:
+		-> Data    : Collection of 'Row' objects
+		-> Schema  : StructType object
+
+			StructType(
+			    [
+				StructField('age', LongType(), True), 
+				StructField('gender', StringType(), True), 
+				StructField('name', StringType(), True), 
+				StructField('phone', StringType(), True), 
+				StructField('userid', LongType(), True)
+			    ]
+			
+
+   Basic steps in creating a Spark SQL Application
+   -----------------------------------------------
+
+	1. Read/load data from some data-source into a DataFrame
+
+ 		inputPath = "E:\\PySpark\\data\\users.json"
+		df1 = spark.read.format("json").load(inputPath)
+		df1 = spark.read.load(inputPath, format="json")
+		df1 = spark.read.json(inputPath)
+
+		df1.show()
+		df1.printSchema()
+
+
+	2. Transform the DF using DF transformation methods or using SQL
+
+	        Using DF transformation
+		-----------------------
+		df2 = df1.select("userid", "name", "age", "gender", "phone") \
+        		.where("age is not null") \
+        		.orderBy("gender", "age") \
+        		.groupBy("age").count() \
+        		.limit(4)
+
+
+		Using SQL
+		---------
+		df1.createOrReplaceTempView("users")
+		spark.catalog.listTables()
+
+		qry = """select age, count(*) as count
+			from users
+			where age is not null
+			group by age
+			order by age
+			limit 4"""
+					
+		df3 = spark.sql(qry)
+		df3.show()
+
+
+	3. Save the dataframe into some external destination (such as files/databases/hive etc)
+
+		df3.write.format("json").save(outputPath)
+		df3.write.save(outputPath, format="json")
+		df3.write.json(outputPath)
+
+		df3.write.json(outputPath, mode="overwrite")
+
+
+  Save Modes
+  ----------
+    -> Control the behaviour when saving a DF into an existing directory.
+
+	1. errorIfExists (default)
+	2. ignore
+	3. append
+	4. overwrite
+
+	df3.write.mode("overwrite").json(outputPath)
+	df3.write.json(outputPath, mode="overwrite")
+
+
+
+  DF Transformations
+  ------------------
+
+   1. select
+
+
+
+   2. where
+
+
+
+   3. orderBy
+
+
+
+   4. groupBy
+
+
+
+   5. limit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
