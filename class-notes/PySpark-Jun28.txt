@@ -1,0 +1,233 @@
+
+  Agenda (PySpark)
+  -------------------
+   Spark - Basics & Architecture
+   Spark Core API Basics
+	-> RDD - Transformations & Actions
+	-> Spark shared variables
+   Spark Submit command
+   Spark SQL
+	-> DataFrame Operations
+	-> Integrations - RDBMS & Hive
+   Spark Streaming
+	-> Structured Streaming
+
+  Materials
+  ---------
+	=> PDF Presentations
+	=> Code Modules 
+	=> Databricks Notebooks 
+	=> Class Notes
+        => Github: https://github.com/ykanakaraju/pyspark
+   
+  Spark
+  -----
+    => Spark is in-memory distributed computing framework for big data analytics.
+
+	in-memory: ability to persist intermediate results in RAM and subsequent operations
+		   can directly work on these persisted intermediate results. 
+
+    => Spark is written in Scala programming language
+
+    => Spark is a polyglot
+	-> Scala, Java, Python, R (and SQL)
+
+    => Spark applications can run on:
+	-> local, Spark standalone, YARN, Mesos, Kubernetes
+
+    => Spark is unified analytics framework.
+
+
+  Spark Unified Framework
+  -----------------------
+	Spark provides a consistent set of APIs for performing different analytics workloads
+        using the same execution engine and some well defined data abstractions and operations.
+
+   	Batch Analytics of unstructured data	-> Spark Core API (low-level api)
+	Batch Analytics of structured data 	-> Spark SQL
+	Streaming Analytics (real time)		-> Spark Streaming (DStreams API), Structured Streaming
+	Predictive analytics (ML)		-> Spark MLLib  (mllib & ml)
+	Graph parallel computations  		-> Spark GraphX
+
+
+  Getting started with Spark on Databricks
+  ----------------------------------------   
+   ** Databricks Community Edition (free edition)
+ 		
+	Signup: https://www.databricks.com/try-databricks
+		Screen 1: Fill up the details with valid email address
+		Screen 2: Click on "Get started with Community Edition" link (Not the 'Continue' button)
+
+	Login: https://community.cloud.databricks.com/login.html
+
+	Downloading a file from Databricks
+	----------------------------------
+		/FileStore/<FILEPATH>
+		https://community.cloud.databricks.com/files/<FILEPATH>?o=1072576993312365
+
+		Example:
+		dbfs:/FileStore/output/wc/part-00000
+		https://community.cloud.databricks.com/files/output/wc/part-00000?o=1072576993312365
+
+		dbfs:/FileStore/output/wordcount1/part-00000
+		https://community.cloud.databricks.com/files/output/wordcount1/part-00000?o=1072576993312365
+
+
+ 	Enabling DBFS File browser
+	--------------------------
+	<your account (top-right)> -> Admin settings -> Advanced -> Other -> DBFS File Browser (enable it)
+  
+
+   Spark Architecture
+   ------------------
+
+	1. Cluster Manager (CM)
+		-> Applications are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
+
+	2. Driver
+		-> Master process
+		-> Runs the 'SparkContext' object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
+
+		Deploy Modes:
+		-> Where to run the driver process
+		1. Client : default, driver runs on the client. 
+		2. Cluster: driver runs on one of the nodes on the cluster.
+
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> Receives the tasks from the Driver
+		-> All tasks run the same code but on different partitions of the data
+		-> The status of tasks are reported to the driver. 
+
+
+   RDD (Resilient Distributed Dataset)
+   -----------------------------------
+
+	-> RDD is the fundamental data abstraction of Spark
+
+	-> RDD is a collection of distributed in-memory partitions.
+	    -> Each partition is a collection of objects of some type.
+
+	-> RDDs are immutable
+
+	-> RDDs are lazily evaluated
+	   -> Transformations does not cause execution.
+	   -> Action commands trigger execution.
+
+
+   Creating RDDs
+   -------------
+
+	Three ways:
+
+	1. Creating an RDD from external data file
+
+		rdd1 = sc.textFile(<dataPath>, 4)
+
+		default Number of partitions: sc.defaultMinPartition
+		  sc.defaultMinPartition = 2, if number of cores >= 2
+					   1, otherwise
+
+	2. Creating an RDD from programmatic data
+
+		rdd1 = sc.parallelize([2,1,3,2,4,3,5,4,6,7,5,6,7,6,8,8,9,0], 2)
+
+		default Number of partitions: sc.defaultParallelism
+		sc.defaultParallelism = number of CPU cores allocated.
+
+	3. By applying transformations on existing RDDs
+
+		rdd2 = rdd1.map(lambda x: x*10)
+
+   RDD Operations
+   --------------
+
+    Two types of operations
+
+	1. Transformations
+		-> Transformations return RDDs
+		-> Transformations does not cause execution of RDDs
+		-> Cause lineage DAGs to be created
+
+	2. Actions
+		-> Triggers execution of RDDs
+		-> Produces output by sending a Job to the cluster
+
+
+   RDD Lineage DAG
+   ---------------
+    Driver maintains a Lineage DAG for every RDD.
+    Lineage DAG is a heirarchy of dependencies of RDDs all the way starting from the very first RDD.	
+    Lineage DAG is a logical plan on how to create the RDD.
+
+	rddFile = sc.textFile("E:\\Spark\\wordcount.txt", 4)
+	Lineage DAG: (4) rddFile -> sc.textFile on E:\\Spark\\wordcount.txt
+
+	rddWords = rddFile.flatMap(lambda x: x.split())
+	Lineage DAG: (4) rddWords -> rddFile.flatMap -> sc.textFile
+
+	rddPairs = rddWords.map(lambda x: (x, 1))
+	Lineage DAG: (4) rddPairs -> rddWords.map -> rddFile.flatMap -> sc.textFile
+
+	rddWc = rddPairs.reduceByKey(lambda x, y: x + y)
+	Lineage DAG: (4) rddWc -> rddPairs.reduceByKey -> rddWords.map -> rddFile.flatMap -> sc.textFile
+
+
+  RDD Transformations
+  -------------------
+   
+  1. map		P: U -> V
+			Object to object transformation
+			Input RDD: N objects, Output RDD: N objects					
+
+  		rdd2 = rddFile.map(lambda x : x.split())
+
+
+  2. filter		P: U -> Boolean
+			Filters the objects based on the function
+			Input RDD: N objects, Output RDD: <= N objects	
+
+		rddFile.filter(lambda x: len(x.split()) > 8 ).collect()
+
+
+  3. glom		P: None
+			Return one list object per partition with all the objects of the partition
+			Input RDD: N objects, Output RDD: number of objects = number of partitions
+
+		rdd1	    rdd2 = rdd1.glom()
+
+		P0: 3,4,2,4,6  -> glom -> P0: [3,4,2,4,6]
+		P1: 4,6,7,8,6  -> glom -> P1: [4,6,7,8,6] 
+		P2: 5,0,7,9,1  -> glom -> P2: [5,0,7,9,1] 
+
+
+ 
+   4. mapPartitions
+		
+		.. to be discussed
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
