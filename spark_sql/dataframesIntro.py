@@ -33,6 +33,7 @@ myRangeEvenNumbers.show(10)
 myRangeEvenNumbers.printSchema()
 myRangeEvenNumbers.explain()
 
+
 myRangeEvenNumbersList = myRangeEvenNumbers.take(20)
 
 ######################################################    

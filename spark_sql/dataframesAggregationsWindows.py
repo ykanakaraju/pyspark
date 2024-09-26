@@ -4,63 +4,69 @@ findspark.init()
 
 from pyspark.sql import SparkSession
 
-retails_data_csv = "C:\\PySpark\\data\\retail-data\\all\\*.csv"
-
 spark = SparkSession \
     .builder \
     .appName("Basic Dataframe Operations") \
     .config("spark.master", "local") \
     .getOrCreate()
 
-'''
-spark.conf.set("spark.executor.memory", '8g')
-spark.conf.set('spark.executor.cores', '3')
-spark.conf.set('spark.cores.max', '3')
-spark.conf.set("spark.driver.memory",'8g')
-'''
+retails_data_csv = "E:\\PySpark\\data\\retail-data\\all\\*.csv"
+
 df = spark.read.format("csv")\
   .option("header", "true")\
   .option("inferSchema", "true")\
   .load(retails_data_csv)\
-  .coalesce(5)
+  .repartition(5)
   
 df.cache()
 
-df.createOrReplaceTempView("dfTable")
-
 df.printSchema()
+
+df.show(2, False, True)
+
+df.count()
+
 # ----------------------------------------------------------
 #  Example 1 
 # ----------------------------------------------------------
     
 from pyspark.sql.window import Window
-from pyspark.sql.functions import desc
+from pyspark.sql.functions import max, avg, col, dense_rank, rank, row_number, to_date
+
+
+dfWithDate = df.withColumn("date", to_date(col("InvoiceDate"), "M/d/yyyy H:mm"))
+
+dfWithDate \
+    .select("CustomerID", "date", "Quantity") \
+    .where("CustomerID IS NOT NULL") \
+    .orderBy("CustomerID", "date") \
+    .show(100)
+
+dfWithDate.printSchema()
 
 windowSpec = Window \
-  .partitionBy("CustomerId", "date") \
+  .partitionBy("CustomerID", "date") \
   .orderBy("Quantity") \
   .rowsBetween(Window.unboundedPreceding, Window.currentRow)
-
-from pyspark.sql.functions import max,col
-maxPurchaseQuantity = min(col("Quantity")).over(windowSpec)
-
-from pyspark.sql.functions import dense_rank, rank
+ 
+maxPurchaseQuantity = max(col("Quantity")).over(windowSpec)
+avgPurchaseQuantity = avg(col("Quantity")).over(windowSpec)
 purchaseDenseRank = dense_rank().over(windowSpec)
 purchaseRank = rank().over(windowSpec)
+rowNumber = row_number().over(windowSpec)
 
-from pyspark.sql.functions import col, to_date
-dfWithDate = df.withColumn("date", to_date(col("InvoiceDate"), "MM/d/yyyy H:mm"))
-dfWithDate.createOrReplaceTempView("dfWithDate")
-spark.sql("SELECT InvoiceDate, date FROM dfWithDate").show()
-
-dfWithDate.where("CustomerId IS NOT NULL").orderBy("CustomerId")\
+dfWithDate \
+  .where("CustomerId IS NOT NULL") \
+  .orderBy("CustomerId")\
   .select(
     col("CustomerId"),
     col("date"),
     col("Quantity"),
-    purchaseRank.alias("quantityRank"),
-    purchaseDenseRank.alias("quantityDenseRank"),
-    maxPurchaseQuantity.alias("maxPurchaseQuantity")).show()
+    rowNumber.alias("rowNumber"),
+    purchaseRank.alias("qtyRank"),
+    purchaseDenseRank.alias("qtyDenseRank"),
+    avgPurchaseQuantity.alias("avgQty"),
+    maxPurchaseQuantity.alias("maxQty")).show(100)
 
 
 spark.stop()

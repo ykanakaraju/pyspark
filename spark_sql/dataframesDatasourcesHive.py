@@ -16,16 +16,19 @@ spark = SparkSession \
     .enableHiveSupport() \
     .getOrCreate()
     
-spark.catalog.listTables()    
+spark.catalog.listTables()  
 
+spark.catalog.currentDatabase()
+spark.catalog.listDatabases()
 
 spark.sql("show databases").show()
 
-spark.sql("drop database sparkdemo cascade")
+spark.sql("drop database if exists sparkdemo cascade")
 spark.sql("create database if not exists sparkdemo")
 spark.sql("use sparkdemo")
 
 spark.catalog.listTables()
+spark.catalog.currentDatabase()
 
 spark.sql("DROP TABLE IF EXISTS movies")
 spark.sql("DROP TABLE IF EXISTS ratings")
@@ -71,7 +74,7 @@ summaryDf = ratingsDF \
               
 summaryDf.show()
     
-joinStr = summaryDf["movieId"] == moviesDF["movieId"]
+joinStr = summaryDf.movieId == moviesDF.movieId
     
 summaryDf2 = summaryDf.join(moviesDF, joinStr) \
                 .drop(summaryDf["movieId"]) \
@@ -81,10 +84,14 @@ summaryDf2 = summaryDf.join(moviesDF, joinStr) \
     
 summaryDf2.show()
  
-summaryDf2.write.mode("overwrite").format("hive").saveAsTable("topRatedMovies")
+summaryDf2.write \
+   .mode("overwrite") \
+   .format("hive") \
+   .saveAsTable("topRatedMovies")
+   
 spark.catalog.listTables()
         
-topRatedMovies = spark.sql("SELECT * FROM topRatedMovies")
+topRatedMovies = spark.table("topRatedMovies")
 topRatedMovies.show() 
     
 spark.catalog.listFunctions()  

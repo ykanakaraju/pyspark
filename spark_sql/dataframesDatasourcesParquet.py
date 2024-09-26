@@ -14,14 +14,13 @@ spark = SparkSession \
     .config("spark.master", "local") \
     .getOrCreate()
 
-parquetFile = spark.read\
-    .format("parquet")\
-    .load(data_path)
+parquetFile = spark.read.format("parquet").load(data_path)
   
-
 parquetFile.show()
 
 filterQry = col("count") > 100
 parquetFiltered = parquetFile.where(filterQry)  
+
+parquetFiltered.write.format("parquet").save(data_output_path)
 
 spark.stop()

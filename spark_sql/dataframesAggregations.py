@@ -3,7 +3,7 @@ import findspark
 findspark.init()
 
 from pyspark.sql import SparkSession
-from pyspark.sql import StorageLevel
+from pyspark import StorageLevel
 
 retails_data_csv = "C:\\PySpark\\data\\retail-data\\all\\*.csv"
 
@@ -32,6 +32,7 @@ df.cache()  #df.persist(StorageLevel.MEMORY_ONLY)
 
 df.createOrReplaceTempView("dfTable")
 
+df.count()
 df.show()
 df.printSchema()
 # ----------------------------------------------------------
@@ -41,7 +42,7 @@ from pyspark.sql.functions import count, countDistinct, approx_count_distinct
 df.select(count("StockCode")).show()
 #df.groupBy("StockCode").count().show()
 df.select(countDistinct("StockCode")).show()
-#df.select(approx_count_distinct("StockCode", 0.1)).show()
+df.select(approx_count_distinct("StockCode", 0.01)).show()
 
 spark.sql("""SELECT count(StockCode),
                     approx_count_distinct(StockCode)
@@ -71,10 +72,12 @@ df.select(sumDistinct("Quantity")).show()
 df.select(avg("Quantity")).show()
 
 spark.sql("""SELECT sum(Quantity)  as sumQty, 
+                    sum(DISTINCT Quantity) as sumDistinct,
                     mean(Quantity) as mean
              FROM dfTable""").show() 
 
-from pyspark.sql.functions import mean, expr             
+from pyspark.sql.functions import mean, expr   
+          
 df.select(
   count("Quantity").alias("total_transactions"),
   sum("Quantity").alias("total_purchases"),
@@ -114,6 +117,7 @@ spark.sql("SELECT skewness(Quantity), kurtosis(Quantity) FROM dfTable").show()
 # Example 6 - Covariance and Correlation
 #----------------------------------------------------------
 from pyspark.sql.functions import corr, covar_pop, covar_samp
+
 df.select(corr("InvoiceNo", "Quantity"), covar_samp("InvoiceNo", "Quantity"),
     covar_pop("InvoiceNo", "Quantity")).show()
 
@@ -139,7 +143,7 @@ spark.sql("SELECT collect_set(Country), collect_list(Country) FROM dfTable") \
 #----------------------------------------------------------
 from pyspark.sql.functions import count, sum
 
-df.groupBy("InvoiceNo", "CustomerId").count().show()
+df.groupBy("InvoiceNo", "CustomerId").sum("Quantity").show()
 
 df.groupBy("InvoiceNo").agg(
     count("Quantity").alias("quan"),

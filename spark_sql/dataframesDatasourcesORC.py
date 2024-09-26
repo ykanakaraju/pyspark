@@ -14,9 +14,7 @@ spark = SparkSession \
     .config("spark.master", "local") \
     .getOrCreate()
 
-orcFile = spark.read\
-    .format("orc")\
-    .load(data_path)
+orcFile = spark.read.format("orc").load(data_path)
   
 filterQry = col("count") > 100
 orcFiltered = orcFile.where(filterQry)  

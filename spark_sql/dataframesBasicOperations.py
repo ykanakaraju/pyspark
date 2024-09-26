@@ -4,7 +4,7 @@ findspark.init()
 
 from pyspark.sql import SparkSession
 
-flight_json_dir = "C:\\PySpark\\data\\flight-data\\json\\"
+flight_json_dir = "E:\\PySpark\\data\\flight-data\\json\\"
 flight_json_2015 = flight_json_dir + "2015-summary.json"
 
 spark = SparkSession \
@@ -12,6 +12,8 @@ spark = SparkSession \
     .appName("Basic Dataframe Operations") \
     .config("spark.master", "local") \
     .getOrCreate()
+
+spark.conf.set("spark.sql.shuffle.partitions", '10')
 
 '''
 spark.conf.set("spark.executor.memory", '8g')
@@ -24,13 +26,29 @@ spark.conf.set("spark.driver.memory",'8g')
 #  Reading from JSON files
 ######################################################   
 
-df = spark.read.format("json").load(flight_json_2015)
+#df = spark.read.format("json").load(flight_json_2015)
+df = spark.read.json(flight_json_2015)
 
 # Schema inference
 df.schema
 df.printSchema()
 df.columns   # lists all the columns
 df.show(30, truncate=False)
+
+######################################################  
+# Basic Ops - Programmatic Schema
+###################################################### 
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+
+my_fields = [StructField('ORIGIN_COUNTRY_NAME', StringType(), True), 
+             StructField('DEST_COUNTRY_NAME', StringType(), True),
+             StructField('count', IntegerType(), True)]
+
+my_schema  = StructType(my_fields)
+
+df_custom_schema = spark.read.schema(my_schema).json(flight_json_2015)
+
+df_custom_schema.printSchema()
 
 ######################################################  
 # Basic Ops - select & selectExpr
@@ -47,17 +65,19 @@ df.select(expr("DEST_COUNTRY_NAME"),
           column("DEST_COUNTRY_NAME")) \
   .show(2)
 
-df.select(expr("DEST_COUNTRY_NAME AS destination")).show(2)
+df.select(expr("DEST_COUNTRY_NAME AS destination"), col("ORIGIN_COUNTRY_NAME").alias("origin") ).show(2)
 
-df.select(expr("DEST_COUNTRY_NAME as destination").alias("DEST_COUNTRY_NAME"))\
+df.select(expr("DEST_COUNTRY_NAME").alias("destination"))\
 .show(2)
+
 
 # selectExpr
 df.selectExpr("DEST_COUNTRY_NAME as newColumnName", "DEST_COUNTRY_NAME").show(2)
+#df.select(expr("DEST_COUNTRY_NAME as newColumnName"), expr("DEST_COUNTRY_NAME")).show(2)
 
 df.selectExpr(
   "*", # all original columns
-  "(DEST_COUNTRY_NAME = ORIGIN_COUNTRY_NAME) as withinCountry")\
+  "(DEST_COUNTRY_NAME = ORIGIN_COUNTRY_NAME) as withinCountry") \
   .show(2)
 
 df.selectExpr("avg(count) as AvgCount", "count(distinct(DEST_COUNTRY_NAME)) as DistCountries").show(2)
@@ -68,15 +88,18 @@ df.selectExpr("avg(count) as AvgCount", "count(distinct(DEST_COUNTRY_NAME)) as D
 from pyspark.sql.functions import lit
 df.select(expr("*"), lit(1).alias("One")).show(2)
 
+df.select("*", lit("Hello").alias("Hi")).show(2)
+
 ######################################################  
 # Basic Ops - withColumn (Adding a new column)
 ###################################################### 
 
 df.show(2)
 
-df.withColumn("numberOne", lit("Hi")).show(2)
+df.withColumn("numberOne", lit(1)).show(2)
+df.withColumn("numberOne", lit(1)).printSchema()
 
-df.withColumn("withinCountry", expr("ORIGIN_COUNTRY_NAME == DEST_COUNTRY_NAME"))\
+df.withColumn("withinCountry", expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME"))\
   .show(2)
 
 # one way to rename a column without using withColumnRenamed method  
@@ -86,18 +109,37 @@ df.withColumn("Destination", expr("DEST_COUNTRY_NAME")).columns
 # Basic Ops - withColumnRenamed (Renaming column)
 ###################################################### 
 
+df.withColumnRenamed("DEST_COUNTRY_NAME", "destination") \
+  .withColumnRenamed("ORIGIN_COUNTRY_NAME", "origin") \
+  .show(5)
+
 df.withColumnRenamed("DEST_COUNTRY_NAME", "dest").columns
 
 ######################################################  
 # Basic Ops - drop (Drop columns)
 ###################################################### 
-df.drop("ORIGIN_COUNTRY_NAME").columns
-df.drop("ORIGIN_COUNTRY_NAME", "DEST_COUNTRY_NAME")
+df.printSchema()
+
+df2 = df.drop("ORIGIN_COUNTRY_NAME")
+df2.printSchema()
+
+df.printSchema()
+df.drop("ORIGIN_COUNTRY_NAME", "DEST_COUNTRY_NAME").show(5)
 
 ######################################################  
 # Basic Ops - cast (Casting from one type to another)
 ###################################################### 
-df.withColumn("count2", col("count").cast("long")).printSchema()
+df.printSchema()
+df.withColumn("count2", col("count").cast("int")).printSchema()
+
+df.select("DEST_COUNTRY_NAME",  "ORIGIN_COUNTRY_NAME", col("count").cast("int")).printSchema()
+
+'''
+df.createOrReplaceTempView("flights")
+qry = "select DEST_COUNTRY_NAME as dest, ORIGIN_COUNTRY_NAME as origin, count from flights"
+spark.sql(qry).printSchema()
+df.printSchema()
+'''
 
 ######################################################  
 # Filtering Data - filter & where 
@@ -115,6 +157,11 @@ df.where(col("count") < 2) \
 ######################################################  
 # Fetch unique records - distinct
 ######################################################
+
+# df.createOrReplaceTempView("flights")  
+# qry = "select COUNT( DISTINCT(ORIGIN_COUNTRY_NAME) )  as distinct_origin from flights"
+# spark.sql(qry).show()
+  
 df.select("ORIGIN_COUNTRY_NAME").distinct().count()
 
 df.select("ORIGIN_COUNTRY_NAME", "DEST_COUNTRY_NAME").distinct().count()
@@ -122,16 +169,17 @@ df.select("ORIGIN_COUNTRY_NAME", "DEST_COUNTRY_NAME").distinct().count()
 ######################################################  
 # Random Sampling - sample
 ######################################################
-seed = 5
+seed = 25
 withReplacement = False
-fraction = 0.03
+fraction = 0.05
+
 df.sample(withReplacement, fraction, seed).show()
 
 ######################################################  
 # Random Splits - randomSplit
 ######################################################
 seed = 5
-randomDfs = df.randomSplit([0.25, 0.35, 0.4], seed)
+randomDfs = df.randomSplit([0.25, 0.35, 0.4], 5)
 randomDfs[0].count() 
 randomDfs[1].count() 
 randomDfs[2].count() 
@@ -142,37 +190,42 @@ randomDfs[2].count()
 
 from pyspark.sql import Row
 schema = df.schema
-row1 = Row("India", "UK", 1)
-row2 = Row("UK", "India", 1)
+row1 = Row("India", "UK", 234)
+row2 = Row("India", "India", 234)
 newDF = spark.createDataFrame([row1, row2], schema)
 
 df.show()
 newDF.show()
+newDF.printSchema()
 
 df.union(newDF)\
-.where("count = 1")\
+.where("DEST_COUNTRY_NAME = 'India'")\
 .where(col("ORIGIN_COUNTRY_NAME") != "United States")\
 .show()
 
 ######################################################  
 # Sorting
 ######################################################
+from pyspark.sql.functions import desc, asc, expr
 
 df.sort("count").show(5)
+df.sort( desc("count") ).show(10)
+df.sort( col("count").desc() ).show(10)
+
 df.orderBy("DEST_COUNTRY_NAME", "count").show(5)
 df.orderBy(col("count"), col("DEST_COUNTRY_NAME")).show(5)
 
-from pyspark.sql.functions import desc, asc
-df.orderBy(expr("count desc")).show(2)
-df.orderBy(col("count").desc(), col("DEST_COUNTRY_NAME").asc()).show(2)
+df.orderBy(col("ORIGIN_COUNTRY_NAME"), desc("count")).show(100)
 
 ######################################################  
 # limit
 ######################################################
 
 df.limit(5).show()
-df.orderBy(expr("count desc")).limit(6).show()
 
+df.show(5)
+
+df.orderBy(expr("count desc")).limit(6).show()
 
 ######################################################  
 # repartition & coalesce
@@ -180,10 +233,11 @@ df.orderBy(expr("count desc")).limit(6).show()
 
 df.rdd.getNumPartitions()  # 1 partition
 
-df.repartition(col("DEST_COUNTRY_NAME"))
-df.rdd.getNumPartitions() 
+df.show(10)
+df4 = df.repartition(col("DEST_COUNTRY_NAME"))
+df4.rdd.getNumPartitions() 
 
-df2 = df.repartition(5, col("DEST_COUNTRY_NAME"))
+df2 = df.repartition(4, col("DEST_COUNTRY_NAME"))
 df2.rdd.getNumPartitions()
 
 df3 = df2.coalesce(2)
@@ -198,9 +252,11 @@ df.repartition(5, col("DEST_COUNTRY_NAME")).coalesce(2)
 # collect data to the driver
 ######################################################
 collectDF = df.limit(10)
+
 collectDF.take(5) 
-collectDF.show() 
 collectDF.show(5)
+
+collectDF.show() 
 collectDF.collect()
 
 collectDF.schema
