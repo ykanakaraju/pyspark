@@ -25,18 +25,20 @@ if __name__ == "__main__":
         .getOrCreate()
         
     spark.sparkContext.setLogLevel("ERROR")    
+    spark.conf.set("spark.sql.shuffle.partitions", "1")
+    spark.conf.set("spark.sql.streaming.checkpointLocation", "/home/kanak/pyspark/checkpoint/file_sink");
        
-    df = spark.readStream.format("rate").option("rowsPerSecond", 5).load()
+    df = spark.readStream.format("rate").option("rowsPerSecond", 10).load()
     # df will have two columns: timestamp, value
 
-    resultDF = df.withColumn("newValue", df.value * 10)
-     # columns: timestamp, value, newValue
+    resultDF = df.withColumn("newValue", col("value") * 10)
     
     query = resultDF\
-        .writeStream\
-        .outputMode('append')\
-        .option("truncate", False)\
-        .format('console')\
+        .writeStream \
+        .outputMode('append') \
+        .trigger(processingTime='2 seconds') \
+        .format('csv') \
+        .option("path", "/home/kanak/pyspark/output/csv") \
         .start()
    
 

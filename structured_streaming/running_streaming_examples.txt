@@ -28,13 +28,22 @@ bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/file
 # Copy csv files from /home/kanak/csvdir to /home/kanak/sparkdir
 bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/filestream_csv.py
 
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/filesource_filesink.py
+
+
 #-------------------------------------------------------
 # Rate Streams
 #-------------------------------------------------------
 bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/ratestream_1.py
 
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/ratesource_csvsink.py
+
+bin/spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/rate_source_multiple_sinks.py
+bin/spark-submit --master local[2] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/rate_source_foreachbatch_sink.py
+
+
 #-------------------------------------------------------
-# Kafka Sink
+# Kafka 
 #-------------------------------------------------------
 # kafka streams example
 

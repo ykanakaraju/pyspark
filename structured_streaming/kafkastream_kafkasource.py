@@ -32,8 +32,25 @@ if __name__ == "__main__":
         .option("kafka.bootstrap.servers", "localhost:9092") \
         .option("subscribe", "t1") \
         .load()
+        #.option("startingOffsets", "earliest") 
+        
+    '''
+    df.printSchema()
+    
+    root
+    |-- key: binary (nullable = true)
+    |-- value: binary (nullable = true)
+    |-- topic: string (nullable = true)
+    |-- partition: integer (nullable = true)
+    |-- offset: long (nullable = true)
+    |-- timestamp: timestamp (nullable = true)
+    |-- timestampType: integer (nullable = true)
+    '''        
 
-    output = df.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
+    output = df.selectExpr("CAST(key AS STRING)", 
+                           "CAST(value AS STRING)", 
+                           "partition", 
+                           "offset")
     
     query = output\
         .writeStream\

@@ -24,11 +24,13 @@ if __name__ == "__main__":
     spark.sparkContext.setLogLevel("ERROR") 
     spark.conf.set("spark.sql.streaming.checkpointLocation", "/home/kanak/pyspark/kafka_checkpoint");
        
-    df = spark.readStream.format("rate").option("rowsPerSecond", 5).load()
+    df = spark.readStream.format("rate").option("rowsPerSecond", 10).load()
+    # timestamp, value  1  -> "Message: 1"
 
     resultDF = df.withColumn("value", concat(lit("Message: "), col("value"))) \
                  .selectExpr("CAST(timestamp AS STRING)", "CAST(value AS STRING)") \
-                 .withColumnRenamed("timestamp", "key")
+                 .withColumnRenamed("timestamp", "key")                 
+    # key: timestamp, value: Message: 1
     
     query = resultDF.writeStream \
         .format("kafka") \

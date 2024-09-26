@@ -35,12 +35,12 @@ if __name__ == "__main__":
             StructField("deptid", IntegerType(), True)])    
     
     df = spark.readStream.json(path, schema = mySchema)
-
+    
     groupDF = df.select("deptid").groupBy("deptid").count()
     
     query = groupDF\
         .writeStream\
-        .outputMode('update')\
+        .outputMode('complete')\
         .format('console')\
         .start()
 

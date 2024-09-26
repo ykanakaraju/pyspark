@@ -14,8 +14,7 @@ sys.path.append('/home/kanak/spark-2.4.7-bin-hadoop2.7/python')
 sys.path.append('/home/kanak/spark-2.4.7-bin-hadoop2.7/python/lib/py4j-0.10.7-src.zip')
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import explode
-from pyspark.sql.functions import split
+from pyspark.sql.functions import explode, split
 
 if __name__ == "__main__":
     
@@ -36,7 +35,7 @@ if __name__ == "__main__":
         .format('socket')\
         .option('host', host)\
         .option('port', port)\
-        .load()
+        .load()     
 
     # Split the lines into words
     words = lines.select(

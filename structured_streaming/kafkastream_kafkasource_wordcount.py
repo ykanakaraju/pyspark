@@ -34,13 +34,12 @@ if __name__ == "__main__":
 
     lines = df.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")              
     words = lines.select(explode(split(lines.value, ' ')).alias('word'))
-    wordCounts = words.groupBy('word').count()
-    
+    wordCounts = words.groupBy('word').count()    
     
     # in this we can use only 'complete' and 'update' outputModes
     query = wordCounts\
         .writeStream\
-        .outputMode('complete')\
+        .outputMode('update')\
         .format('console')\
         .start()
 

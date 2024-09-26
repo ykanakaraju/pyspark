@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 ##-------------------------------------------
-# Using Trigger  (processingTime='4 seconds')
+# Using Window Operations  
 ##-------------------------------------------
 
 from __future__ import print_function
@@ -18,8 +18,7 @@ sys.path.append('/home/kanak/spark-2.4.7-bin-hadoop2.7/python')
 sys.path.append('/home/kanak/spark-2.4.7-bin-hadoop2.7/python/lib/py4j-0.10.7-src.zip')
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import explode
-from pyspark.sql.functions import split
+from pyspark.sql.functions import explode, split, current_timestamp, window
 
 if __name__ == "__main__":
     
@@ -43,32 +42,24 @@ if __name__ == "__main__":
         .load()
 
     # Split the lines into words
-    words = lines.select(
-        # explode turns each item in an array into a separate row
-        explode(
-            split(lines.value, ' ')
-        ).alias('word')
-    )
+    words = lines.select(explode(split(lines.value, ' ')).alias('word')) \
+                 .withColumn("ts", current_timestamp())
 
     # Generate running word count
-    wordCounts = words.groupBy('word').count()
+    # hopping window: window(words.ts, "6 seconds", "6 seconds")
+    # sliding window: window(words.ts, "6 seconds", "3 seconds")
+    wordCounts = words \
+                 .withWatermark("ts", "3 seconds")\
+                 .groupBy(
+                      window(words.ts, "6 seconds", "6 seconds"),
+                      words.word) \
+                 .count()                    
     
-    '''
-    The trigger settings of a streaming query define the timing of streaming data 
-    processing, whether the query is going to be executed as micro-batch query with 
-    a fixed batch interval or as a continuous processing query. 
-    
-    Here are the different kinds of triggers that are supported.
-    
-    trigger(processingTime='1 seconds')
-    trigger(once=True) 
-    trigger(continuous='1 second')    
-    '''
     # Start running the query that prints the running counts to the console
     query = wordCounts \
         .writeStream \
-        .trigger(processingTime='4 seconds') \
-        .outputMode('update') \
+        .outputMode('append') \
+        .trigger(processingTime='3 seconds') \
         .format('console') \
         .start()
 

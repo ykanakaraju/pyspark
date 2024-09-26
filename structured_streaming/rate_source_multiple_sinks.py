@@ -41,16 +41,15 @@ if __name__ == "__main__":
     df = spark.readStream.format("rate").option("rowsPerSecond", 2).load()
     # df will have two columns: timestamp, value
 
-    resultDF = df.withColumnRenamed("timestamp", "key") 
     resultDF = df.withColumn("value", concat(lit("Message: "), col("value"))) \
                  .selectExpr("CAST(timestamp AS STRING)", "CAST(value AS STRING)") \
                  .withColumnRenamed("timestamp", "key")
     
-    # write to json file sink
+    # write to csv file sink
     query = resultDF.writeStream \
         .outputMode('append') \
         .trigger(processingTime='5 seconds') \
-        .format('json') \
+        .format('csv') \
         .option("path", "/home/kanak/pyspark/output/csv") \
         .start()   
         

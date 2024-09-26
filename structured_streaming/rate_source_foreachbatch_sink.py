@@ -30,13 +30,12 @@ if __name__ == "__main__":
        
     df = spark.readStream.format("rate").option("rowsPerSecond", 5).load()
     # df will have two columns: timestamp, value
-
-    #resultDF = df.withColumnRenamed("timestamp", "key") 
     
     resultDF = df.withColumn("value", concat(lit("Message: "), col("value"))) \
                  .selectExpr("CAST(timestamp AS STRING)", "CAST(value AS STRING)") \
                  .withColumnRenamed("timestamp", "ts")\
-                 .withColumnRenamed("value", "message")   
+                 .withColumnRenamed("value", "message")                  
+    # resultDF columns:  ts, message
     
     def process_data(df, epoch_id):
         
@@ -65,6 +64,7 @@ if __name__ == "__main__":
         pass
     
     query = resultDF.writeStream.foreachBatch(process_data).start()
+    
     query.awaitTermination()
 
     
