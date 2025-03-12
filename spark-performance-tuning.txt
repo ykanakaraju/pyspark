@@ -1,0 +1,86 @@
+
+ Spark Performance Tuning and Optimization
+ -----------------------------------------
+  - Spark Execution Process
+  - Spark Memory Management & Configurations
+  - Understanding Shuffle
+  - Spark Query Plans
+  - Spark DAG
+  - Performance Tuning & Optimization
+	- Spill, Skew, Shuffle, Storage, Serialization
+	- Configurations, File formats, Settings
+	- Code level considerations
+  - Adaptive Query Execution (AQE)
+  - Out-of-memory issues
+	- Driver & Executor OOM
+
+
+==============================
+   Query Plans
+==============================
+
+Narrow transformations
+-----------------------
+*(1) Project [cust_id#165, split(name#166,  , 2)[0] AS first_name#256, split(name#166,  , 3)[1] AS last_name#265, (cast(age#167 as double) + 5.0) AS age#275, gender#168, birthday#169]
++- *(1) Filter (isnotnull(city#171) AND (city#171 = boston))
+   +- *(1) ColumnarToRow
+      +- FileScan parquet [cust_id#165,name#166,age#167,gender#168,birthday#169,city#171] Batched: true, DataFilters: [isnotnull(city#171), (city#171 = boston)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/customers.parquet], PartitionFilters: [], PushedFilters: [IsNotNull(city), EqualTo(city,boston)], ReadSchema: struct<cust_id:string,name:string,age:string,gender:string,birthday:string,city:string>
+
+
+
+repartition
+-----------
+AdaptiveSparkPlan isFinalPlan=false
++- Exchange RoundRobinPartitioning(24), REPARTITION_BY_NUM, [plan_id=209]
+   +- FileScan parquet [cust_id#36,start_date#37,end_date#38,txn_id#39,date#40,year#41,month#42,day#43,expense_type#44,amt#45,city#46] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/transactions.parquet], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<cust_id:string,start_date:string,end_date:string,txn_id:string,date:string,year:string,mon...
+
+
+coalesce
+--------
+Coalesce 5
++- *(1) ColumnarToRow
+   +- FileScan parquet [cust_id#36,start_date#37,end_date#38,txn_id#39,date#40,year#41,month#42,day#43,expense_type#44,amt#45,city#46] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/transactions.parquet], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<cust_id:string,start_date:string,end_date:string,txn_id:string,date:string,year:string,mon...
+
+
+sort-merge join
+---------------
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Project [cust_id#36, start_date#37, end_date#38, txn_id#39, date#40, year#41, month#42, day#43, expense_type#44, amt#45, city#46, name#166, age#167, gender#168, birthday#169, zip#170, city#171]
+   +- SortMergeJoin [cust_id#36], [cust_id#165], Inner
+      :- Sort [cust_id#36 ASC NULLS FIRST], false, 0
+      :  +- Exchange hashpartitioning(cust_id#36, 200), ENSURE_REQUIREMENTS, [plan_id=258]
+      :     +- Filter isnotnull(cust_id#36)
+      :        +- FileScan parquet [cust_id#36,start_date#37,end_date#38,txn_id#39,date#40,year#41,month#42,day#43,expense_type#44,amt#45,city#46] Batched: true, DataFilters: [isnotnull(cust_id#36)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/transactions.parquet], PartitionFilters: [], PushedFilters: [IsNotNull(cust_id)], ReadSchema: struct<cust_id:string,start_date:string,end_date:string,txn_id:string,date:string,year:string,mon...
+      +- Sort [cust_id#165 ASC NULLS FIRST], false, 0
+         +- Exchange hashpartitioning(cust_id#165, 200), ENSURE_REQUIREMENTS, [plan_id=259]
+            +- Filter isnotnull(cust_id#165)
+               +- FileScan parquet [cust_id#165,name#166,age#167,gender#168,birthday#169,zip#170,city#171] Batched: true, DataFilters: [isnotnull(cust_id#165)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/customers.parquet], PartitionFilters: [], PushedFilters: [IsNotNull(cust_id)], ReadSchema: struct<cust_id:string,name:string,age:string,gender:string,birthday:string,zip:string,city:string>
+
+
+broadcast join
+---------------
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Project [cust_id#36, start_date#37, end_date#38, txn_id#39, date#40, year#41, month#42, day#43, expense_type#44, amt#45, city#46, name#166, age#167, gender#168, birthday#169, zip#170, city#171]
+   +- BroadcastHashJoin [cust_id#36], [cust_id#165], Inner, BuildRight, false, true
+      :- Filter isnotnull(cust_id#36)
+      :  +- FileScan parquet [cust_id#36,start_date#37,end_date#38,txn_id#39,date#40,year#41,month#42,day#43,expense_type#44,amt#45,city#46] Batched: true, DataFilters: [isnotnull(cust_id#36)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/transactions.parquet], PartitionFilters: [], PushedFilters: [IsNotNull(cust_id)], ReadSchema: struct<cust_id:string,start_date:string,end_date:string,txn_id:string,date:string,year:string,mon...
+      +- Exchange SinglePartition, EXECUTOR_BROADCAST, [plan_id=351]
+         +- Filter isnotnull(cust_id#165)
+            +- FileScan parquet [cust_id#165,name#166,age#167,gender#168,birthday#169,zip#170,city#171] Batched: true, DataFilters: [isnotnull(cust_id#165)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/customers.parquet], PartitionFilters: [], PushedFilters: [IsNotNull(cust_id)], ReadSchema: struct<cust_id:string,name:string,age:string,gender:string,birthday:string,zip:string,city:string>
+
+
+groupBy .. count
+----------------
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[city#46], functions=[finalmerge_count(merge count#447L) AS count(1)#442L], output=[city#46, count#443L])
+   +- Exchange hashpartitioning(city#46, 200), ENSURE_REQUIREMENTS, [plan_id=417]
+      +- HashAggregate(keys=[city#46], functions=[partial_count(1) AS count#447L], output=[city#46, count#447L])
+         +- FileScan parquet [city#46] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/transactions.parquet], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<city:string>
+
+
+
+
+
+
