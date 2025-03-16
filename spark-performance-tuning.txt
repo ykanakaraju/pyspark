@@ -1,6 +1,7 @@
 
  Spark Performance Tuning and Optimization
- -----------------------------------------
+ =========================================
+
   - Spark Execution Process
   - Spark Memory Management & Configurations
   - Understanding Shuffle
@@ -71,13 +72,194 @@ AdaptiveSparkPlan isFinalPlan=false
             +- FileScan parquet [cust_id#165,name#166,age#167,gender#168,birthday#169,zip#170,city#171] Batched: true, DataFilters: [isnotnull(cust_id#165)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/customers.parquet], PartitionFilters: [], PushedFilters: [IsNotNull(cust_id)], ReadSchema: struct<cust_id:string,name:string,age:string,gender:string,birthday:string,zip:string,city:string>
 
 
-groupBy .. count
-----------------
+groupBy .. count & sum
+-----------------------
+== Physical Plan ==
 AdaptiveSparkPlan isFinalPlan=false
 +- HashAggregate(keys=[city#46], functions=[finalmerge_count(merge count#447L) AS count(1)#442L], output=[city#46, count#443L])
    +- Exchange hashpartitioning(city#46, 200), ENSURE_REQUIREMENTS, [plan_id=417]
       +- HashAggregate(keys=[city#46], functions=[partial_count(1) AS count#447L], output=[city#46, count#447L])
          +- FileScan parquet [city#46] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/transactions.parquet], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<city:string>
+
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[city#12], functions=[finalmerge_sum(merge sum#76) AS sum(cast(amt#11 as double))#71], output=[city#12, txn_amt#72])
+   +- Exchange hashpartitioning(city#12, 200), ENSURE_REQUIREMENTS, [plan_id=57]
+      +- HashAggregate(keys=[city#12], functions=[partial_sum(cast(amt#11 as double)) AS sum#76], output=[city#12, sum#76])
+         +- FileScan parquet [amt#11,city#12] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/transactions.parquet], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<amt:string,city:string>
+
+
+groupBy -- countDistinct
+-------------------------
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[cust_id#2], functions=[finalmerge_count(distinct merge count#100L) AS count(city#12)#96L], output=[cust_id#2, city_count#95L])
+   +- Exchange hashpartitioning(cust_id#2, 200), ENSURE_REQUIREMENTS, [plan_id=113]
+      +- HashAggregate(keys=[cust_id#2], functions=[partial_count(distinct city#12) AS count#100L], output=[cust_id#2, count#100L])
+         +- HashAggregate(keys=[cust_id#2, city#12], functions=[], output=[cust_id#2, city#12])
+            +- Exchange hashpartitioning(cust_id#2, city#12, 200), ENSURE_REQUIREMENTS, [plan_id=109]
+               +- HashAggregate(keys=[cust_id#2, city#12], functions=[], output=[cust_id#2, city#12])
+                  +- FileScan parquet [cust_id#2,city#12] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[dbfs:/FileStore/data/transactions.parquet], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<cust_id:string,city:string>
+
+
+ Documentation:
+
+	https://spark.apache.org/docs/latest/configuration.html
+
+
+
+  Spark Performance Tuning
+  ------------------------
+
+   5S of Performance Tuning - Spill, Skew, Shuffle, Storage, Serialization
+
+
+  1. Spill
+
+	- Spilling occurs when a partition is too large to fit in available RAM and writes temporary files to disk.
+		- Spill (Memory): size of the data (deserialized ) as it exists in memory before it is spilled.
+		- Spill (Disk): size of the data that gets spilled (serialized), written to disk. 
+
+	- To reduce spill, use these techniques:
+		- Instantiating a cluster with greater memory per worker.
+		- Increasing the number of partitions (smaller partitions) can reduce spill. 
+		  Experiment with partition sizes to find the sweet spot between in-memory processing and disk usage.
+
+  2. Skew
+
+	- Skew is caused by an imbalance in partition sizes. 
+	- Skew in small amounts can be entirely fine, but in excess, it can cause Spill and OOM issues. 
+
+	- To reduce Skew, we can do the following:
+		- Salting: Distribute skewed data evenly across partitions using techniques like salting
+		- Filter before shuffle: Reduce the amount of skewed data shuffled across the network by filtering it early on.
+		- Adaptive Query Execution: Enable and use AQE.
+
+  3. Shuffle
+
+	- Shuffle occurs when data is moved between executors during wide transformations.
+
+	- The ideal size of each shuffle partition is around 100-200 MB.
+		- The smaller size of partitions will increase the parallel running jobs, which can improve performance.
+		- But, too small of a partition will cause overhead and increase the GC time.
+
+	- To reduce shuffling, we can use the following techniques:
+		- Creating fewer and larger workers (thus lowering network IO overheads). 
+		- Before shuffling, filter and project only required data to reduce its size. 
+		- Use Broadcast Hash Join while working with small tables. 
+
+  4. Storage
+
+	- When data is saved on Disk in an inefficient manner, storage concerns develop. 
+	- Storage issues have the potential to generate undue Shuffle. 
+
+	- Use columnar formats instead of row-oriented formats for faster reads and writes.
+
+  5. Serialization
+
+	- Serialization incorporates all of the issues involved with code distribution across clusters.
+	- Code is serialized, transmitted to executors, and then deserialized.
+	- In the case of Python, this process can be considerably more difficult because the code must be pickled and a Python interpreter instance must be allocated to each executor.
+
+	- Some techniques to handle serialization problems are:
+		- Use the Kryo serializer by default
+		  spark.conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+		- Use columnar storage formats such as Parquet.
+		- Avoid using UDFs
+
+
+
+  Spark Performance Tuning - What shoud you do?
+  --------------------------------------------
+
+  1. Data format: Use parquet with snappy compression as preferred data format.
+
+  2. Parallelism: increased parallelism generally improves performance.
+
+  3. Garbage Collection: Cost of GC is proportional to number of objects (not size of objects)
+
+  4. Serilization: Occurs generally during network transfer (shuffle), Disk Spills, UDF execution etc. 
+	- Use Kryo serializer by default
+	  spark.conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+
+  5. Dynamic resource allocation: Enable if your using YARN
+	- spark.dynamicAllocation.enabled = true
+	- spark.dynamicAllocation.minExecutors = xx
+	- spark.dynamicAllocation.maxExecutors = xx
+
+  6. Executor settings: Properly set executor settings based on data volume and cluster capacity. 
+	- Number of executors, Cores per executor, memory per executor
+	- Opt for 5 cores per executor in YARN
+	- More memory available per core usually works good.
+
+  7. offHeapMemory - always enable it (usually 10% of heap)
+
+  8. Disk spills - optimize spill buffers and enable compression
+
+	spark.shuffle.file.buffer
+	spark.shuffle.compress
+
+  9. Shuffle operations: Chose those transformation that cause little or no shuffle
+	- prefer coalesce over repartition, reduceByKey over groupBYKey, Broadcast over Sort-merge join when applicable.
+
+  10. Use SparkUI
+
+  11. Minimize scans
+
+	- Always supply schema (when known) and avoid schema inference
+	- Use partitioning and bucketing
+	- Minimize data skew
+
+  12. Join optimizations
+	
+	- Safest join - sort-merge join
+	- Fastest join - broadcast
+
+  13. Persistence 
+	- always persist reusable data partitions, to avoid recomputation.
+	- unpersist the partition when no longer reused. 
+
+	
+
+
+  Adaptive Query Execution (AQE)
+  ===============================
+
+	- AQE Optimizer is introduced in Apache Spark 3.0 
+	- AQE makes use of the runtime statistics to choose the most efficient query execution plan
+	- AQE optimizer dynamically adapts the execution plan based on the characteristics of the data.
+	
+	- As of Spark 3.0, there are three major features in AQE: 
+		- Coalescing post-shuffle partitions
+		- Converting sort-merge join to broadcast join
+		- Skew join optimization.
+
+
+
+  
+
+
+
+
+   
+     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
