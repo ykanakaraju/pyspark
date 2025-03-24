@@ -1,0 +1,140 @@
+
+  Agenda (PySpark) - 16 sessions of 2 hrs each
+  --------------------------------------------
+   Spark - Basics & Architecture
+   Spark Core API Basics
+	-> RDD Transformations & Actions
+	-> Shared variables
+   Spark Submit command
+   Spark SQL
+	-> DataFrame Operations
+	-> Integrations - RDBMS & Hive
+   Spark Streaming
+	-> Structured Streaming
+
+  Materials
+  ---------
+	=> PDF Presentations
+	=> Code Modules 
+	=> Databricks Notebooks 
+	=> Class Notes
+        => Github: https://github.com/ykanakaraju/pyspark
+
+
+  Spark
+  -----
+
+    => Spark is in-memory distributed computing framework for big data analytics.
+
+	in-memory: ability to persist intermediate results in RAM and subsequent operations
+		   can directly work on these persisted intermediate results. 
+
+    => Spark is written in Scala programming language
+
+    => Spark is a polyglot
+	-> Scala, Java, Python, R (and SQL)
+
+    => Spark applications can run on:
+	-> local, Spark standalone, YARN, Mesos, Kubernetes
+
+    => Spark is unified analytics framework.
+	
+
+  Spark Unified Framework
+  -----------------------
+
+    Spark provides a consistent set of APIs for performing different analytics workloads
+    using the same execution engine and some well defined data abstractions and operations.
+
+	Batch Analytics			-> Spark SQL
+	Streaming Analytics (real time)	-> Structured Streaming, DStreams API
+	Predictive analytics (ML)	-> Spark MLLib  (mllib & ml)
+	Graph parallel computations  	-> Spark GraphX
+
+
+	
+  Getting started with Spark
+  -------------------------- 
+
+   1. Setting up local dev environment
+
+	Ref URL: https://github.com/ykanakaraju/pyspark/blob/master/Pyspark-JupyterNotebooks-Windows-Setup.pdf  
+	Spark download: https://spark.apache.org/downloads.html
+
+
+   2. Databricks Community Edition (preferred)
+
+
+  Getting started with Spark on Databricks
+  ----------------------------------------   
+
+   ** Databricks Community Edition (free edition)
+ 		
+	Signup: https://www.databricks.com/try-databricks
+		Screen 1: Fill up the details with valid email address
+		Screen 2: Click on "Get started with Community Edition" link (Not the 'Continue' button)
+
+	Login: https://community.cloud.databricks.com/login.html
+
+	Downloading a file from Databricks
+	----------------------------------
+		/FileStore/<FILEPATH>
+		https://community.cloud.databricks.com/files/<FILEPATH>?o=1072576993312365
+
+		Example:
+		dbfs:/FileStore/output/wc/part-00000
+		https://community.cloud.databricks.com/files/output/wc/part-00000?o=1072576993312365
+
+		dbfs:/FileStore/output/wordcount1/part-00000
+		https://community.cloud.databricks.com/files/output/wordcount1/part-00000?o=1072576993312365
+
+
+ 	Enabling DBFS File browser
+	--------------------------
+	<your account (top-right)> -> Settings -> Advanced -> Other -> DBFS File Browser (enable it)		
+
+  
+
+  
+
+
+
+
+
+     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
