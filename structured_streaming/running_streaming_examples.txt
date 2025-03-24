@@ -1,0 +1,68 @@
+./bin/spark-submit --master local /home/kanak/pyspark/WordCount.py
+
+
+$cd /home/kanak/spark-2.4.7-bin-hadoop2.7
+
+
+nc -lk 9999
+cd spark-2.4.7-bin-hadoop2.7/
+
+#-------------------------------------------------------
+# Socket streams
+#-------------------------------------------------------
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/socketstream_wordcount_1.py
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/socketstream_wordcount_2.py
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/socketstream_wordcount_3.py
+
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/socketstream_filesink_csv.py
+
+#-------------------------------------------------------
+# File Streams
+#-------------------------------------------------------
+# Copy text files from /home/kanak/testdir to /home/kanak/sparkdir
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/filestream_text.py
+
+# Copy json files from /home/kanak/jsondir to /home/kanak/sparkdir
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/filestream_json.py
+
+# Copy csv files from /home/kanak/csvdir to /home/kanak/sparkdir
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/filestream_csv.py
+
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/filesource_filesink.py
+
+
+#-------------------------------------------------------
+# Rate Streams
+#-------------------------------------------------------
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/ratestream_1.py
+
+bin/spark-submit --master local[2] /home/kanak/pyspark/structured_streaming/ratesource_csvsink.py
+
+bin/spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/rate_source_multiple_sinks.py
+bin/spark-submit --master local[2] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/rate_source_foreachbatch_sink.py
+
+
+#-------------------------------------------------------
+# Kafka 
+#-------------------------------------------------------
+# kafka streams example
+
+    # kafka console producer command
+    bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic t1 --property parse.key=true --property key.separator=":"
+    # kafka console consumer command
+    bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic t1 --property print.key=true --property key.separator=" - "
+        
+
+    bin/spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/kafkastream_kafkasource.py
+    bin/spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/kafkastream_kafkasource_wordcount.py
+    bin/spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 /home/kanak/pyspark/structured_streaming/kafkastream_kafkasink.py
+
+
+
+
+    
+bin/spark-submit --master local[*] /home/kanak/pyspark/structured_streaming/twitter_streaming_1.py   
+    
+    
+    
+
