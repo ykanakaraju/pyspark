@@ -1,0 +1,8 @@
+{"userid": 1, "name":"Satya", "gender": "Male", "age":25, "address":{"city":"Hyderabad", "state":"TS"}}
+{"gender": "Male", "userid": 2, "phone": "5676599876", "address":{"city":"Chennai", "state":"TN"}}
+{"name":"Rahim", "userid": 3, "gender": "Male", "age":25, "address":{"city":"Bangalore", "state":"KA"}}
+{"userid": 4, "name":"Sandra", "gender": "Female","age":28, "address":{"city":"Vijayawada", "state":"AP"}}
+{"userid": 5, "name":"Keerti", "gender": "Female", "age":15, "address":{"city":"Mumbai", "state":"MH"}}
+{"userid": 6, "name":"Sundar", "gender": "Male", "age":13, "address":{"city":"Hyderabad", "state":"TS"} }
+{"userid": 7, "name":"Steve", "gender": "Male", "age":28, "address":{"city":"Hyderabad", "state":"TS"} }
+{"userid": 8, "name":"Smriti", "gender": "Female", "age":55, "address":{"city":"Hyderabad", "state":"TS"} }

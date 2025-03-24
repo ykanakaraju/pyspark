@@ -1,0 +1,40 @@
+INFO This is a message with content
+
+INFO This is a some other message
+INFO Sample message one more time
+WARN You have unused variables in your code
+ERROR Something bad happened
+
+ERROR NoClassDefFound Exception thrown
+WARN More details about the error
+INFO Back to normal
+INFO This is a message with content
+
+INFO This is a some other message
+INFO Sample message one more time
+WARN You have unused variables in your code
+ERROR Something bad happened
+
+ERROR NoClassDefFound Exception thrown
+WARN More details about the error
+INFO Back to normal
+INFO This is a message with content
+
+INFO This is a some other message
+INFO Sample message one more time
+WARN You have unused variables in your code
+ERROR Something bad happened
+
+ERROR NoClassDefFound Exception thrown
+WARN More details about the error
+INFO Back to normal
+INFO This is a message with content
+
+INFO This is a some other message
+INFO Sample message one more time
+WARN You have unused variables in your code
+ERROR Something bad happened
+
+ERROR NoClassDefFound Exception thrown
+WARN More details about the error
+INFO Back to normal

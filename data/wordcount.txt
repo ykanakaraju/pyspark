@@ -1,0 +1,11 @@
+spark is a general purpose execution framework
+spark can run on hadoop
+scala is preferred language for spark
+spark also supports java and python
+spark is a general purpose execution framework
+spark can run on hadoop
+scala is preferred language for spark
+spark also supports java and python
+python spark scala java pyspark hadoop
+spark python spark rdd rdd rdd sql spark
+pythom machine learning spark sql rdd rdd
