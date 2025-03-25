@@ -51,7 +51,6 @@
 	Predictive analytics (ML)	-> Spark MLLib  (mllib & ml)
 	Graph parallel computations  	-> Spark GraphX
 
-
 	
   Getting started with Spark
   -------------------------- 
@@ -94,22 +93,66 @@
 	<your account (top-right)> -> Settings -> Advanced -> Other -> DBFS File Browser (enable it)		
 
   
+  Databricks Basics
+  -----------------
+	
+	1. Compute - Spin up cluster resources		
+		1. All purpose clusters - continuously running, persistent cluster
+		2. Job clusters - spinned up to execute a job and then terminated	
 
+	2. Catalog
+		-> All data is stored in Catalog
+		-> All local files are store in /FileStore directory
+		-> Default hive warehouse directory : /user/hive/warehouse
+
+	3. Workspace
+		-> All the notebooks are managed in the workspace
   
 
+  Spark Architecture
+  ------------------
 
+	1. Cluster Manager (CM)
+		-> Applications are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
 
+	2. Driver
+		-> Master process
+		-> Runs the 'SparkContext' object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
+
+		Deploy Modes:
+		  -> Where to run the driver process
+		  1. Client : default, driver runs on the client. 
+		  2. Cluster: driver runs on one of the nodes on the cluster.
+
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> Receives the tasks from the Driver
+		-> All tasks run the same code but on different partitions of the data
+		-> The status of tasks are reported to the driver. 
 
 
      
+  RDD (Resilient Distributed Dataset)
+  -----------------------------------
 
+	-> RDD is the fundamental data abstraction of Spark
 
+	-> RDD is a collection of distributed in-memory partitions.
+	    -> Each partition is a collection of objects of some type.
 
+	-> RDDs are immutable
 
-
-
-
-
+	-> RDDs are lazily evaluated
+	   -> Transformations does not cause execution.
+	   -> Action commands trigger execution. 
 
 
 
