@@ -373,11 +373,6 @@
 		-> In YARN, each executor should have 5 cores
 	
 
-
-
-
-
-
   RDD Actions
   -----------
 
@@ -429,6 +424,158 @@
    11. saveAsSequenceFile
 
 	rddWc.saveAsSequenceFile("/FileStore/output/seq")
+
+
+
+
+   Case Study
+   ----------		
+	dataset: https://github.com/ykanakaraju/pyspark/blob/master/data_git/cars.tsv
+
+	From cars.tsv dataset, get the average weight of all the models of each make of American origin cars. 
+	-> Arrange in the DESC order of average weight. 
+        -> Save the output as a single text file. 
+		
+
+
+   Spark Executor Memory Structure
+   -------------------------------   
+  
+      Let us say we are requesting an executor with 10 GB RAM. 
+      The spark job will be allocated executors with 10.3 GB (10GB + 300MB) RAM. 
+      
+      1. Reserved Memory (300 MB)
+           -> Spark's internal usage
+      
+      2. Spark Memory (spark.memory.fraction: 0.6)   => 6 GB (Unified Memory)
+          
+         2.1  Execution Memory
+                 -> Used for RDD partition creation and transformation
+                 -> Can forcibly evict RDD partitions from storage memory if it requires
+                    additional memory upto the quota allocated for it.
+
+         2.2  Storage Memory (spark.memory.storageFraction: 0.5) => 3 GB
+                 -> The RDD partitions and broadcast variables are persisted
+                    in this memory.
+
+      3. User Memory  => 4 GB
+         -> Running non-spark related code execution. 
+         -> Related to running python methods, storing python collection.
+
+ 
+  RDD Persistence
+  ---------------
+
+	rdd1 = sc.textFile(<path>, 10)
+	rdd2 = rdd1.t2(...)
+	rdd3 = rdd1.t3(...)
+	rdd4 = rdd3.t4(...)
+	rdd5 = rdd3.t5(...)
+	rdd6 = rdd5.t6(...)
+	rdd6.persist(StorageLevel.MEMORY_AND_DISK)   -> instruction for spark to save the partitions
+	rdd7 = rdd6.t7(...)
+
+	rdd6.collect()
+	Lineage DAG: rdd6 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+		(sc.textFile -> t3 -> t5 -> t6 -> collected)	
+
+	rdd7.collect()
+	Lineage DAG: rdd7 -> rdd6.t7
+		(t7 -> collected)
+
+
+	Storage Levels	
+	--------------	
+	MEMORY_ONLY		-> (default) Memory Serialized 1x Replicated
+	MEMORY_AND_DISK		-> Disk Memory Serialized 1x Replicated
+	DISK_ONLY		-> Disk Serialized 1x Replicated
+	MEMORY_ONLY_2		-> Memory Serialized 2x Replicated
+	MEMORY_AND_DISK_2	-> Disk Memory Serialized 2x Replicated
+	
+
+	Commands
+   	--------
+	rdd1.cache() 	-> in-memory persistence
+	rdd1.persist()  -> in-memory persistence
+	rdd1.persist( StorageLevel.MEMORY_AND_DISK )
+
+	rdd1.unpersist()
+
+
+
+   Spark Closures
+   --------------
+	In Spark, a closure constitutes all the variables and methods which must be visible 
+	for the executor, for a task, to perform its computations on the RDD. 
+
+	This closure is serialized and a separate copy sent to each executor.
+  
+	c = 0
+
+	def isPrime(n):
+	  return True/False
+
+	def f1(n):
+	  global c
+	  if (isPrime(n)): c = c + 1
+	  return n*2
+	
+	rdd1 = sc.parallelize( range(1, 4001), 4 )
+	rdd2 = rdd1.map( f1 )
+	rdd2.collect()
+
+	print(c)      # c = 0
+
+
+	Limitation: Local variables (that are part of closure) can not be used to implement global counter. 
+	Solution: Use an Accumulator. 
+
+
+
+   Spark Shared Variables
+   ----------------------
+
+    1. Accumulator variable
+
+	-> Is a shared variable, not part of a closure
+	-> Not a local copy
+	-> One variable maintained by the driver
+	-> All tasks can add to this variable (the driver copy is updated)
+	-> Is used to implement "global counter"
+   
+
+	c = sc.accumulator(0)
+
+	def isPrime(n):
+	  return True/False
+
+	def f1(n):
+	  global c
+	  if (isPrime(n)): c.add(1)
+	  return n*2
+
+	rdd1 = sc.parallelize(range(4000), 4)
+	rdd2 = rdd1.map(f1)
+
+	rdd2.collect()
+
+	print(c)  
+
+
+   2. Broadcast Variable
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
