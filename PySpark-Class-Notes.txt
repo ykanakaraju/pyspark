@@ -20,6 +20,66 @@
 	=> Class Notes
         => Github: https://github.com/ykanakaraju/pyspark
 
+
+
+   Setting up PySpark on Windows machine
+   -------------------------------------
+
+	1. Install Java 8 or up
+
+		java -version
+		
+		https://www.oracle.com/in/java/technologies/downloads/#jdk24-windows
+
+	2. Add JAVA_HOME environment variable
+
+		Go to 'Edit system environemt variables' windows
+		Add JAVA_HOME env. variable with the PATH were Java is installed.
+
+	3. Download and extract Spark binaries.
+
+		URL: https://spark.apache.org/downloads.html
+		Choose the version
+		Download spark: <click on this link>
+		Go to the mirron site and download
+
+
+		-> Extract the downloaded file in a suitable folder
+		(tar -xvf <path-of-tgz file>)
+
+	4. Add SPARK_HOME environment variable
+
+		Go to 'Edit system environemt variables' windows
+		Add SPARK_HOME env. variable with the PATH were Spark is extracted.
+
+	5. Setup Hadoop winutils for windows 
+
+		URL: https://github.com/cdarlint/winutils
+		Download the repo
+		Extract it and copy the folder to your Spark path. 
+
+	6. Add HADOOP_HOME environment variable
+
+		Go to 'Edit system environemt variables' windows
+		Add HADOOP_HOME env. variable with the PATH were hadoop is extracted.
+
+	7. Add the "bin" folders of the above to the PATH environment variable
+
+		%JAVA_HOME%\bin
+		%SPARK_HOME%\bin
+		%HADOOP_HOME%\bin
+
+	8. Open a command terminal and type spark-shell
+
+		C:> spark-shell
+
+	9. Download and install Python (3 or above)
+
+	10. Pip install find-spark library for python
+
+		pip install findspark
+
+
   Spark
   -----
 
@@ -505,6 +565,7 @@
 
    Spark Closures
    --------------
+
 	In Spark, a closure constitutes all the variables and methods which must be visible 
 	for the executor, for a task, to perform its computations on the RDD. 
 
@@ -563,6 +624,90 @@
 
 
    2. Broadcast Variable
+
+	-> Is a shared variable that is not part of the closure
+	-> Variable is broadcasted to each executor node.
+	-> All tasks in that executor can read from that copy.	
+
+
+	bc = sc.broadcast({ 1:a, 2:b, 3:c, 4:d, 5:e, .... })     # 100 MB
+
+	def f1(n):
+	  global bc
+	  return bc.value[n]
+
+	rdd1 = sc.parallelize([1,2,3,4,5,...], 4)
+	rdd2 = rdd1.map(f1)	
+	rdd2.collect()
+
+
+
+   Spark-Submit command
+   --------------------
+
+	spark-submit command is used to submit any spark application (java, scala, python, R) to any cluster
+	manager (local, spark stanalone, YARN, Mesos, Kubernetes)
+
+	submit [options] <app jar | python file | R file> [app arguments]
+
+	spark-submit  --master yarn  
+		--deploy-mode cluster
+		--driver-memory	4G
+		--executor-memory 12G
+		--driver-cores 2
+		--executor-cores 5
+		--num-executors 10
+		E:\\Spark\\wordcount.py [app args]
+
+
+  =====================
+    Spark SQL
+  =====================
+
+    -> High Level API built on top of Spark Core
+
+	File Formats : Parquet (default), ORC, JSON, CSV (delimited text), Text
+	JDBC Format  : RDBMS, NoSQL
+	Hive Format  : Hive Warehouse
+
+
+   SparkSession
+   ------------
+	-> Starting point of execution in Spark SQL
+	-> Represents a user session (SparkSession) running inside an application (SparkContext)
+	-> Each SparkSession can have its own configuration
+
+	spark = SparkSession \
+    		.builder \
+    		.appName("Basic Dataframe Operations") \
+    		.config("spark.master", "local") \
+    		.getOrCreate()
+
+	spark.conf.set("spark.sql.shuffle.partitions", "10")
+
+	
+   DataFrame (DF)
+   --------------
+	-> Main data abstraction of Spark SQL
+	-> Is a collection of distributed in-memory partitions
+	-> Immutable
+	-> Lazily evaluated
+
+	-> DataFrame is a collection of "Row" objects.
+
+	-> DataFrame contains two components:
+		-> Data    : Collection of 'Row' objects (pyspark.sql.Row)
+		-> Schema  : StructType object ('pyspark.sql.types.StructType') 
+
+			StructType(
+			    [
+				StructField('age', LongType(), True), 
+				StructField('gender', StringType(), True), 
+				StructField('name', StringType(), True), 
+				StructField('phone', StringType(), True), 
+				StructField('userid', LongType(), True)
+			    ]
+			)
 
 
 
