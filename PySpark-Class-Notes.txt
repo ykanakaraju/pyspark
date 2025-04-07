@@ -800,7 +800,117 @@
 	limit 4
 
 
+  Working with different file formats
+  -----------------------------------
 
+  JSON
+	read
+		df1 = spark.read.format("json").load(inputPath)
+		df1 = spark.read.load(inputPath, format="json")
+		df1 = spark.read.json(inputPath)
+		df1 = spark.read.json(inputPath, multiLine=True)
+
+	write
+		df3.write.format("json").save(outputPath)
+		df3.write.save(outputPath, format="json")
+		df3.write.json(outputPath)	
+
+  Parquet (default)
+	read
+		df1 = spark.read.format("parquet").load(inputPath)
+		df1 = spark.read.load(inputPath, format="parquet")
+		df1 = spark.read.parquet(inputPath)
+
+	write
+		df3.write.format("parquet").save(outputPath)
+		df3.write.save(outputPath, format="parquet")
+		df3.write.parquet(outputPath)
+
+
+  ORC
+	read
+		df1 = spark.read.format("orc").load(inputPath)
+		df1 = spark.read.load(inputPath, format="orc")
+		df1 = spark.read.orc(inputPath)
+
+	write
+		df3.write.format("orc").save(outputPath)
+		df3.write.save(outputPath, format="orc")
+		df3.write.orc(outputPath)	
+
+
+  CSV (delimited text)
+
+	read
+		df1 = spark.read.format("csv").option("header", True).option("inferSchema", True).load(inputPath)
+		df1 = spark.read.format("csv").load(inputPath, header=True, inferSchema=True)
+		df1 = spark.read.csv(inputPath, header=True, inferSchema=True)
+		df1 = spark.read.csv(inputPath, header=True, inferSchema=True, sep="|")
+
+		my_schema = StructType(
+    			[
+        			StructField('ORIGIN_COUNTRY_NAME', StringType(), True), 
+        			StructField('DEST_COUNTRY_NAME', StringType(), True), 
+        			StructField('count', IntegerType(), True)
+    			]
+		)
+
+		# use Apache Hive types
+		my_schema = "ORIGIN_COUNTRY_NAME STRING, DEST_COUNTRY_NAME STRING, count INT"
+
+		// using programmatic schema
+		df1 = spark.read.schema(my_schema).csv(inputPath, header=True)
+
+	write
+		df3.write.format("csv").save(outputPath, header=True)
+		df2.write.csv(outputPath, header=True)
+		df2.write.csv(outputPath, header=True, sep="|", mode="overwrite")
+
+
+  Text
+	read
+		df1 = spark.read.text(inputPath)
+
+	write
+		df1.write.text(outputPath)
+
+
+
+  Creating an RDD from DataFrame
+  ------------------------------
+	rdd1 = df1.rdd
+
+
+  Creating a DataFrame from an RDD
+  --------------------------------
+	listUsers = [(1, "Raju", 5),
+		(2, "Ramesh", 15),
+		(3, "Rajesh", 18),
+		(4, "Raghu", 35),
+		(5, "Ramya", 25),
+		(6, "Radhika", 35),
+		(7, "Ravi", 70)]
+
+	rdd1 = spark.sparkContext.parallelize(listUsers)
+
+	df1 = rdd1.toDF(["id", "name", "age"])
+
+	df1.show()
+	df1.printSchema()
+
+
+  Creating a DataFrame from programmatic data
+  --------------------------------------------
+	listUsers = [(1, "Raju", 5),
+		(2, "Ramesh", 15),
+		(3, "Rajesh", 18),
+		(4, "Raghu", 35),
+		(5, "Ramya", 25),
+		(6, "Radhika", 35),
+		(7, "Ravi", 70)]
+
+	df1 = spark.createDataFrame(listUsers, ["id", "name", "age"])
+	df1 = spark.createDataFrame(listUsers).toDF("id", "name", "age")
 
 
 
