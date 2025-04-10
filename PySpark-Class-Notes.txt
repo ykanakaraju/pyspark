@@ -1181,6 +1181,71 @@
    19. join  -> discussed as a separate topic.  
 
 
+  DataFrame Joins
+  ---------------
+
+     Supported Joins:  inner, left, right, full, semi (left_semi), anti (left_anti), cross
+
+     left_semi join
+     ---------------
+	-> Similar to inner join but the data comes only from the left side table.
+	-> Equivalent to the following subquery:
+
+		select * from emp where deptid IN (select id from dept)	 
+
+     left_anti join
+     ---------------
+	-> Equivalent to the following subquery:
+
+		select * from emp where deptid NOT IN (select id from dept)	 
+       
+
+  		===== sample code =====
+
+		employee = spark.createDataFrame([
+			(1, "Raju", 25, 101),
+			(2, "Ramesh", 26, 101),
+			(3, "Amrita", 30, 102),
+			(4, "Madhu", 32, 102),
+			(5, "Aditya", 28, 102),
+			(6, "Pranav", 28, 10000)])\
+		  .toDF("id", "name", "age", "deptid")  
+		  
+		department = spark.createDataFrame([
+			(101, "IT", 1),
+			(102, "ITES", 1),
+			(103, "Opearation", 1),
+			(104, "HRD", 2)])\
+		  .toDF("id", "deptname", "locationid")  
+		  
+		  
+		employee.show()
+		department.show()
+
+		spark.catalog.listTables()
+
+		spark.catalog.dropTempView("dept")
+
+
+		joinCol = employee.deptid == department.id
+		joinedDf = employee.join(department, joinCol, "left_anti")
+		joinedDf.show()
+
+
+
+  Case Study
+  ----------
+	Datasets: movies.csv & ratings.csv
+	URL: https://github.com/ykanakaraju/pyspark/tree/master/data_git/movielens
+
+	From movies.csv & ratings.csv files, find the top 10 movies with highest average user rating
+	-> Consider only those movies that are rated by atleast 50 users
+	-> data:  movieId, title, totalRatings, averageRating
+	-> Sort the data in the DESC order of averageRating
+	-> Round the averageRating to 4 decimal places.
+	-> Save the data as a single pipe-separated CSV file with header. 
+
+	Use only DF transformation methods approach (not SQL)
 
 
 
