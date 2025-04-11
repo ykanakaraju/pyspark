@@ -1231,8 +1231,6 @@
 		joinedDf = employee.join(department, joinCol, "left_anti")
 		joinedDf.show()
 
-
-
   Case Study
   ----------
 	Datasets: movies.csv & ratings.csv
@@ -1246,6 +1244,122 @@
 	-> Save the data as a single pipe-separated CSV file with header. 
 
 	Use only DF transformation methods approach (not SQL)
+
+
+   Working with JDBC format - MySQL Integration
+   --------------------------------------------
+
+	import os
+	import sys
+
+	# setup the environment for the IDE
+	os.environ['SPARK_HOME'] = '/home/kanak/spark-2.4.7-bin-hadoop2.7'
+	os.environ['PYSPARK_PYTHON'] = '/usr/bin/python'
+
+	sys.path.append('/home/kanak/spark-2.4.7-bin-hadoop2.7/python')
+	sys.path.append('/home/kanak/spark-2.4.7-bin-hadoop2.7/python/lib/py4j-0.10.7-src.zip')
+
+	from pyspark.sql import SparkSession
+
+	spark = SparkSession.builder \
+				.appName("JDBC_MySQL") \
+				.config('spark.master', 'local') \
+				.getOrCreate()
+	  
+	qry = "(select emp.*, dept.deptname from emp left outer join dept on emp.deptid = dept.deptid) emp"
+					  
+	df_mysql = spark.read \
+				.format("jdbc") \
+				.option("url", "jdbc:mysql://localhost/sparkdb?autoReConnect=true&useSSL=false") \
+				.option("driver", "com.mysql.jdbc.Driver") \
+				.option("dbtable", qry)  \
+				.option("user", "root") \
+				.option("password", "kanakaraju") \
+				.load()
+					
+	df_mysql.show()  
+
+	spark.catalog.listTables()
+
+	df2 = df_mysql.filter("age > 30").select("id", "name", "age", "deptid")
+
+	df2.show()   
+
+	df2.printSchema()    
+
+	df2.write.format("jdbc") \
+		.option("url", "jdbc:mysql://localhost/sparkdb?autoReConnect=true&useSSL=false") \
+		.option("driver", "com.mysql.jdbc.Driver") \
+		.option("dbtable", "emp2")  \
+		.option("user", "root") \
+		.option("password", "kanakaraju") \
+		.mode("overwrite") \
+		.save()      
+										 
+	spark.stop()
+
+
+
+ ===========================================
+   Spark Streaming (Structured Streaming) 
+ ===========================================
+
+   Spark Streaming APIs:
+
+	-> Spark Streaming (DStreams API) built on top of Spark Core
+		-> pyspark.streaming
+		-> Old & legacy API
+
+	-> Structured Streaming built on top of Spark SQL 
+		-> pyspark.sql.streaming
+		-> Current and preferred API
+
+  Notes:
+
+  The key idea in Structured Streaming is to treat a live data stream as a table that is being 
+  continuously appended.
+
+  You express your streaming computation as standard batch-like query as on a static table, 
+  and Spark runs it as an incremental query on the unbounded input table.
+
+  Programming Model
+  -----------------
+	A query on the input will generate the “Result Table”.
+
+	Every trigger interval (say, every 1 second), new rows get appended to the Input Table, 
+	which eventually updates the Result Table.
+
+	Whenever the result table gets updated, we would want to write the changed result rows 
+	to an external sink.
+
+	Structured Streaming does not materialize the entire table.
+
+	It reads the latest available data, processes it incrementally to update the result, and 
+	then discards the source data.
+
+	Spark is responsible for updating the Result Table when there is new data, thus relieving 
+	the users from reasoning about fault-tolerance and data consistency.
+
+
+  Sources
+  -------
+	Socket Stream (host & port)	
+	File Stream (directory) => text, csv, json, parquet, orc
+	Rate stream
+	Kafka Stream
+
+
+  Sinks
+  -----
+	Console Sink
+	File Sinks  (directory) => text, csv, json, parquet, orc
+	Kafka sink
+	ForEachBatch sink
+	ForEach sink 
+	Memory sink
+	
+
+
 
 
 
