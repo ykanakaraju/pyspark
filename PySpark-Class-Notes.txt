@@ -503,10 +503,78 @@
 	rddWc.saveAsSequenceFile("/FileStore/output/seq")
 
 
-
-
-
+   Spark Executor Memory Structure
+   -------------------------------   
   
+      Let us say we are requesting an executor with 10 GB RAM. 
+      The spark job will be allocated executors with 10.3 GB (10GB + 300MB) RAM. 
+      
+      1. Reserved Memory (300 MB)
+           -> Spark's internal usage
+      
+      2. Spark Memory (spark.memory.fraction: 0.6)   => 6 GB (Unified Memory)
+          
+         2.1  Execution Memory
+                 -> Used for RDD partition creation and transformation
+                 -> Can forcibly evict RDD partitions from storage memory if it requires
+                    additional memory upto the quota allocated for it.
+
+         2.2  Storage Memory (spark.memory.storageFraction: 0.5) => 3 GB
+                 -> The RDD partitions and broadcast variables are persisted
+                    in this memory.
+
+      3. User Memory  => 4 GB
+         -> Running non-spark related code execution. 
+         -> Related to running python methods, storing python collection.
+
+ 
+  RDD Persistence
+  ---------------
+
+	rdd1 = sc.textFile(<path>, 10)
+	rdd2 = rdd1.t2(...)
+	rdd3 = rdd1.t3(...)
+	rdd4 = rdd3.t4(...)
+	rdd5 = rdd3.t5(...)
+	rdd6 = rdd5.t6(...)
+	rdd6.persist( StorageLevel.MEMORY_AND_DISK )  -> instruction to spark to save the partitions of rdd6
+	rdd7 = rdd6.t7(...)
+
+	rdd6.collect()
+	DAG of rdd6: (10) rdd6 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+		[ sc.textFile, t3, t5, t6 ]  ==> sent to driver
+
+	rdd7.collect()
+	DAG of rdd6: (10) rdd7 -> rdd6.t7
+		[ t7 ]  ==> sent to driver
+
+	rdd6.unpersist()
+
+
+   Storage Levels
+   --------------	
+	MEMORY_ONLY		-> Memory Serialized 1x Replicated
+	MEMORY_AND_DISK		-> Disk Memory Serialized 1x Replicated
+	DISK_ONLY		-> Disk Serialized 1x Replicated
+	MEMORY_ONLY_2		-> Memory Serialized 2x Replicated
+	MEMORY_AND_DISK_2	-> Disk Memory Serialized 2x Replicated
+	
+
+   Commands
+   --------
+	rdd1.cache() 	-> in-memory persistence
+	rdd1.persist()  -> in-memory persistence
+	rdd1.persist( StorageLevel.MEMORY_AND_DISK )
+
+	rdd1.unpersist()
+  
+
+
+
+
+
+
+
 
 
 
