@@ -1238,6 +1238,64 @@
 
 
 
+  ======================================================
+    Spark Structured Streaming (pyspark.sql.streaming)
+  ======================================================
+
+   Spark Streaming APIs:
+
+	-> Spark Streaming (DStreams API) built on top of Spark Core
+		-> pyspark.streaming
+		-> Old & legacy API
+
+	-> Structured Streaming built on top of Spark SQL 
+		-> pyspark.sql.streaming
+		-> Current and preferred API
+
+  Notes:
+
+  The key idea in Structured Streaming is to treat a live data stream as a table that is being 
+  continuously appended.
+
+  You express your streaming computation as standard batch-like query as on a static table, 
+  and Spark runs it as an incremental query on the unbounded input table.
+
+
+  Programming Model
+  -----------------
+	A query on the input will generate the “Result Table”.
+
+	Every trigger interval (say, every 1 second), new rows get appended to the Input Table, 
+	which eventually updates the Result Table.
+
+	Whenever the result table gets updated, we would want to write the changed result rows 
+	to an external sink.
+
+	Structured Streaming does not materialize the entire table.
+
+	It reads the latest available data, processes it incrementally to update the result, and 
+	then discards the source data.
+
+	Spark is responsible for updating the Result Table when there is new data, thus relieving 
+	the users from reasoning about fault-tolerance and data consistency.
+
+
+  Sources
+  -------
+	Socket Stream (host & port)	
+	File Stream (directory) => text, csv, json, parquet, orc
+	Rate stream
+	Kafka Stream
+
+
+  Sinks
+  -----
+	Console Sink
+	File Sinks  (directory) => text, csv, json, parquet, orc
+	Kafka sink
+	ForEachBatch sink
+	ForEach sink 
+	Memory sink
 
 
 
