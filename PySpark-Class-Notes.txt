@@ -128,29 +128,44 @@
    ** Databricks Community Edition (free edition)
  		
 	Signup: https://community.cloud.databricks.com/
-	   ==> Choose 'Legacy Community Edition' option
+	   ==> Click on 'Free Edition'
+	   ==> Click on 'Sign up' option to signup
 		
 	Click on "Click here" link (@ bottom-right corner)
 	   ==> Looking for Databricks Community Edition? Click here
 
-	Login: https://community.cloud.databricks.com/login.html
+	Login: https://login.databricks.com/?tuuid=XXXX&dbx_source=direct
 
-	Downloading a file from Databricks
-	----------------------------------
-		/FileStore/<FILEPATH>
-		https://community.cloud.databricks.com/files/<FILEPATH>?o=1072576993312365
+	
+ 	
+  Spark Architecture
+  ------------------
 
-		Example:
-		dbfs:/FileStore/output/wc/part-00000
-		https://community.cloud.databricks.com/files/output/wc/part-00000?o=1072576993312365
+	1. Cluster Manager (CM)
+		-> Applications are submitted to CMs
+		-> Allocates containers for lauching driver and executors on the cluster. 
+		-> Spark supports multiple CMs
+			-> local, standalone, YARN, Mesos, Kubernetes		
 
-		dbfs:/FileStore/output/wordcount1/part-00000
-		https://community.cloud.databricks.com/files/output/wordcount1/part-00000?o=1072576993312365
+	2. Driver
+		-> Master process
+		-> Runs the 'SparkContext' object
+		-> Manages the user code and sends the tasks to the executors as per the code. 
 
+		Deploy Modes:
+		  -> Where to run the driver process
+		  1. Client : default, driver runs on the client. 
+		  2. Cluster: driver runs on one of the nodes on the cluster.
 
- 	Enabling DBFS File browser
-	--------------------------
-	<your account (top-right)> -> Settings -> Advanced -> Other -> DBFS File Browser (enable it)		
+	3. SparkContext
+		-> Is an application context
+		-> Starting point of execution
+		-> Is the link between the driver and tasks running on the executors
+
+	4. Executors
+		-> Receives the tasks from the Driver
+		-> All tasks run the same code but on different partitions of the data
+		-> The status of tasks are reported to the driver. 
 
 
 
