@@ -383,7 +383,7 @@
         		.sortBy(lambda x: x[1], False) 
 
 
- 13. reduceByKey	P: (U, U) -> U,  Optional: numPartitions
+  13. reduceByKey	P: (U, U) -> U,  Optional: numPartitions
 			Reduce all the values of each unique key by iterativly applying the reduce function - first, on
 			each partition, and then, across the reduced values of all partitions. 
 			
@@ -465,6 +465,82 @@
    11. saveAsSequenceFile
 
 	rddWc.saveAsSequenceFile("/FileStore/output/seq")
+
+
+  RDD Persistence
+  ---------------
+
+	rdd1 = sc.textFile(<path>, 100)
+	rdd2 = rdd1.t2(...)
+	rdd3 = rdd1.t3(...)
+	rdd4 = rdd3.t4(...)
+	rdd5 = rdd3.t5(...)
+	rdd6 = rdd5.t6(...)
+	rdd6.persist( StorageLevel.MEMORY_AND_DISK ) --> instruction to save rdd6 partitions
+	rdd7 = rdd6.t7(...)
+
+	rdd6.collect()
+	lineage rdd6: rdd6 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+	[sc.textFile -> t3 -> t5 -> t6] --> collected
+
+	rdd7.collect()
+	lineage rdd6: rdd7 -> rdd6.t7 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+	[t7] --> collected
+
+	rdd6.unpersist()	
+
+   Storage Levels
+   --------------	
+	MEMORY_ONLY		-> default, Memory Serialized 1x Replicated
+	MEMORY_AND_DISK		-> Disk Memory Serialized 1x Replicated
+	DISK_ONLY		-> Disk Serialized 1x Replicated
+	MEMORY_ONLY_2		-> Memory Serialized 2x Replicated
+	MEMORY_AND_DISK_2	-> Disk Memory Serialized 2x Replicated	
+	
+   Commands
+   --------
+	rdd1.cache() 	-> in-memory persistence
+	rdd1.persist()  -> in-memory persistence
+	rdd1.persist( StorageLevel.MEMORY_AND_DISK )
+
+	rdd1.unpersist()
+
+
+  spark-submit
+  ------------
+
+	spark-park-submit command is used to submit any spark application (java, scala, python, R) to any cluster
+	manager (local, spark stanalone, YARN, Mesos, Kubernetes)
+
+	spark-submit [options] <app jar | python file | R file> [app arguments]
+	
+	spark-submit --master yarn \
+		--deploy-mode cluster \
+		--driver-memory 8G \
+		--driver-cores 5 \
+		--executor-memory 8G \
+		--executor-cores 5 \
+		--num-executors 10 \
+		E:\\Pyspark\\wordcount.py  [app-args]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
