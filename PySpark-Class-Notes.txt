@@ -467,6 +467,31 @@
 	rddWc.saveAsSequenceFile("/FileStore/output/seq")
 
 
+   Spark Executor Memory Structure
+   -------------------------------   
+  
+      Let us say we are requesting an executor with 10 GB RAM. 
+      The spark job will be allocated executors with 10.3 GB (10GB + 300MB) RAM. 
+      
+      1. Reserved Memory (300 MB)
+           -> Spark's internal usage
+      
+      2. Spark Memory (spark.memory.fraction: 0.6)   => 6 GB (Unified Memory)
+          
+         2.1  Execution Memory
+                 -> Used for RDD partition creation and transformation
+                 -> Can forcibly evict RDD partitions from storage memory if it requires
+                    additional memory upto the quota allocated for it.
+
+         2.2  Storage Memory (spark.memory.storageFraction: 0.5) => 3 GB
+                 -> The RDD partitions and broadcast variables are persisted
+                    in this memory.
+
+      3. User Memory  => 4 GB
+         -> Running non-spark related code execution. 
+         -> Related to running python methods, storing python collection.
+
+
   RDD Persistence
   ---------------
 
@@ -526,14 +551,135 @@
 
 
 
+  Spark Closures
+  --------------
+	In Spark, a closure constitutes all the variables and methods which must be visible 
+	for the executor to perform its computations on the RDD. 
+
+	This closure is serialized and a separate copy sent to each executor.
+
+	c = 0 
+
+	def isPrime(n):
+	   return True/False
+
+	def f1(n):
+	   global c
+	   if (isPrime(n)) c = c + 1
+	   return n * 10	
+
+	rdd1 = sc.parallelize( range(1, 4001), 4 )
+	rdd2 = rdd1.map( f1 )
+	rdd2.collect()
+
+	print(c)    // 0
 
 
+	Limitation: We can not use local variables to implement global counters
+	Solution: Use 'Accumulator' variables.	
 
 
+  Shared Variables
+  ----------------
+
+    1. Accumulator variable
+
+	-> Is a shared variable, not part of a closure
+	-> Not a local copy
+	-> One variable maintained by the driver
+	-> All tasks can add to this variable (the driver copy is updated)
+	-> Is used to implement "global counter"
 
 
+	c = sc.accumulator(0) 
+
+	def isPrime(n):
+	   return True/False
+
+	def f1(n):
+	   global c
+	   if (isPrime(n)) c.add(1)
+	   return n * 10	
+
+	rdd1 = sc.parallelize( range(1, 4001), 4 )
+	rdd2 = rdd1.map( f1 )
+	rdd2.collect()
+
+	print(c)    // 0
 
 
+   2. Broadcast Variable
+
+	-> Is a shared variable that is not part of the closure
+	-> Variable is broadcasted to each executor node.
+	-> All tasks in that executor can read from that copy.	
+
+	d = sc.broadcast({ 1:a, 2:b, 3:c, 4:d, 5:e, .... })     # 100 MB
+
+	def f1(n):
+	  global d
+	  return d.value[n]
+
+	rdd1 = sc.parallelize([1,2,3,4,5,...], 4)
+	rdd2 = rdd1.map(f1)	
+	rdd2.collect()
+
+
+  =====================
+     Spark SQL
+  =====================
+
+        -> High Level API built on top of Spark Core
+	-> Structured data processing API
+
+	File Formats : Parquet (default), ORC, JSON, CSV (delimited text), Text, Avro
+	JDBC Format  : RDBMS, NoSQL
+	Hive Format  : Hive Warehouse
+
+
+   SparkSession
+   ------------
+	-> Starting point of execution in Spark SQL
+	-> Represents a user session (SparkSession) running inside an application (SparkContext)
+	-> Each SparkSession can have its own configuration
+
+	spark = SparkSession \
+    		.builder \
+    		.appName("Basic Dataframe Operations") \
+    		.config("spark.master", "local") \
+    		.getOrCreate()
+
+	spark.conf.set("spark.sql.shuffle.partitions", "10")
+
+
+   DataFrame (DF)
+   --------------
+	-> Main data abstraction of Spark SQL
+	-> Is a collection of distributed in-memory partitions
+	-> Immutable
+	-> Lazily evaluated
+
+	-> DataFrame is a collection of "Row" objects.
+
+	-> DataFrame contains two components:
+		-> Data    : Collection of 'Row' objects (pyspark.sql.Row)
+		-> Schema  : StructType object ('pyspark.sql.types.StructType') 
+
+			StructType(
+			    [
+				StructField('age', LongType(), True), 
+				StructField('gender', StringType(), True), 
+				StructField('name', StringType(), True), 
+				StructField('phone', StringType(), True), 
+				StructField('userid', LongType(), True)
+			    ]
+			)
+
+
+   Basic steps in creating a Spark SQL Application
+   -----------------------------------------------
+
+	--> continue from here..
 
 
 
