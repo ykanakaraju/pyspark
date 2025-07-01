@@ -626,7 +626,7 @@
 
 
   =====================
-     Spark SQL
+      Spark SQL 
   =====================
 
         -> High Level API built on top of Spark Core
@@ -679,7 +679,92 @@
    Basic steps in creating a Spark SQL Application
    -----------------------------------------------
 
-	--> continue from here..
+	1. Read/load data from some data-source into a DataFrame 		
+
+		inputPath = "E:\\PySpark\\data\\users.json"
+		df1 = spark.read.format("json").load(inputPath)
+		df1 = spark.read.load(inputPath, format="json")
+		df1 = spark.read.json(inputPath)
+
+		df1.show()
+		df1.printSchema()
+
+		display(df1) -> only in Databricks (not a Spark SQL command)
+
+
+	2. Transform the DF using DF transformation methods or using SQL
+
+	        Using DF transformation
+		-----------------------	
+		 df2 = df1.select("userid", "name", "age", "gender", "phone") \
+        		.where("age is not null") \
+        		.orderBy("gender", "age") \
+        		.groupBy("age").count() \
+        		.limit(4)
+
+		Using SQL
+		---------		
+		df1.createOrReplaceTempView("users")
+		spark.catalog.listTables()
+
+		qry = """select age, count(*) as count
+			from users
+			where age is not null
+			group by age
+			order by age
+			limit 4"""
+					
+		df3 = spark.sql(qry)
+		df3.show()
+
+		NOTE: You can drop temp-view:  
+		      -> spark.catalog.dropTempView("users")
+
+	3. Save the dataframe into some external destination (such as files/databases/hive etc)
+
+		df2.write.format("json").save("/FileStore/output/json")
+		df2.write.save("/FileStore/output/json", format="json")
+		df2.write.json("/FileStore/output/json")
+
+
+  Save Modes
+  ----------
+    -> Control the behaviour when saving a DF into an existing directory.
+
+	1. errorIfExists (default)
+	2. ignore
+	3. append
+	4. overwrite
+
+	df3.write.mode("overwrite").json(outputPath)
+	df3.write.json(outputPath, mode="overwrite")
+
+
+
+  LocalTempView & GlobalTempView
+  -------------------------------
+	
+	LocalTempView 
+	   -> Local to a specific SparkSession
+	   -> Created using createOrReplaceTempView command
+
+		df1.createOrReplaceTempView("users")
+
+	GlobalTempView
+	   -> Can be accessed from multiple SparkSessions within the application
+	   -> Tied to "global_temp" database
+	   -> Created using createOrReplaceGlobalTempView command
+
+		df1.createOrReplaceGlobalTempView ("gusers")
+
+	select age, count(1) as count
+	from global_temp.gusers
+	where age is not null
+	group by age
+	order by age
+	limit 4
+
+
 
 
 
