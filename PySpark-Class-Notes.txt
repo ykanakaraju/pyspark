@@ -844,6 +844,182 @@
 
 
 
+  Creating an RDD from DataFrame
+  ------------------------------
+	rdd1 = df1.rdd
+
+
+  Creating a DataFrame from an RDD
+  --------------------------------
+	listUsers = [(1, "Raju", 5),
+		(2, "Ramesh", 15),
+		(3, "Rajesh", 18),
+		(4, "Raghu", 35),
+		(5, "Ramya", 25),
+		(6, "Radhika", 35),
+		(7, "Ravi", 70)]
+
+	rdd1 = spark.sparkContext.parallelize(listUsers)
+
+	df1 = rdd1.toDF(["id", "name", "age"])
+
+	df1.show()
+	df1.printSchema()
+
+
+  Creating a DataFrame from programmatic data
+  --------------------------------------------
+	listUsers = [(1, "Raju", 5),
+		(2, "Ramesh", 15),
+		(3, "Rajesh", 18),
+		(4, "Raghu", 35),
+		(5, "Ramya", 25),
+		(6, "Radhika", 35),
+		(7, "Ravi", 70)]
+
+	df1 = spark.createDataFrame(listUsers, ["id", "name", "age"])
+	df1 = spark.createDataFrame(listUsers).toDF("id", "name", "age")
+
+
+
+  DataFrame Transformations
+  -------------------------
+
+  1. select
+
+	df2 = df1.select("ORIGIN_COUNTRY_NAME", "DEST_COUNTRY_NAME", "count")
+
+
+	df2 = df1.select( 
+		  col("ORIGIN_COUNTRY_NAME").alias("origin"),
+                  col("DEST_COUNTRY_NAME").alias("destination"),
+                  expr("count").cast("int"),
+                  expr("count + 10 as newCount"),
+                  expr("count > 200 as highFrequecy"),
+                  expr("ORIGIN_COUNTRY_NAME = DEST_COUNTRY_NAME as domestic"))
+
+  2. where / filter
+
+	df3 = df2.where("domestic = false and count > 1000")
+	df3 = df2.filter("domestic = false and count > 1000")
+
+	df3 = df2.filter( col("count") > 1000 )
+
+
+  3. orderBy / sort
+
+	df3 = df2.orderBy("count", "origin")
+	df3 = df2.orderBy(desc("count"), asc("origin"))
+	df3 = df2.sort(desc("count"), asc("origin"))
+  
+
+  4. groupBy  => returns a pyspark.sql.group.GroupedData object. Use an aggregation function to return a DataFrame.
+	
+	df3 = df2.groupBy("highFrequecy", "domestic").count()
+	df3 = df2.groupBy("highFrequecy", "domestic").sum("count")
+	df3 = df2.groupBy("highFrequecy", "domestic").max("count")
+	df3 = df2.groupBy("highFrequecy", "domestic").avg("count")
+
+	df3 = df2.groupBy("highFrequecy", "domestic") \
+        	.agg( count("count").alias("count"),
+              		sum("count").alias("sum"),
+              		max("count").alias("max"),
+              		round(avg("count"), 2).alias("avg")
+            	  )
+
+   5. limit	
+
+	df2 = df1.limit(10)
+
+
+   6. selectExpr
+
+	df2 = df1.selectExpr("DEST_COUNTRY_NAME as destination", 
+                     "ORIGIN_COUNTRY_NAME as origin",
+                     "count",
+                     "count + 10 as newCount",
+                     "count > 200 as highFrequency",
+                     "DEST_COUNTRY_NAME = ORIGIN_COUNTRY_NAME as domestic")
+
+	df2.show()
+	df2.printSchema()
+
+  7. withColumn & withColumnRenamed
+
+	df3 = df1.withColumn("newCount", expr("count + 10")) \
+         	.withColumn("highFrequency", expr("count > 200")) \
+         	.withColumn("domestic", expr("DEST_COUNTRY_NAME = ORIGIN_COUNTRY_NAME")) \
+         	.withColumnRenamed("DEST_COUNTRY_NAME", "destination") \
+         	.withColumnRenamed("ORIGIN_COUNTRY_NAME", "origin") \
+            	.withColumn("countryCode", lit(91))
+
+	df3.show(5)
+        ---------------------
+
+	df4 = df3.withColumn("ageGroup", when(expr("age < 13"), "child")
+                                .when(expr("age < 20"), "teenager")
+                                .when(expr("age < 60"), "adult")
+                                .otherwise("senior") )
+
+	df4.show()
+
+
+  8.  udf (user defined function)
+
+		def getAgeGroup( age ):
+			if (age <= 12):
+				return "child"
+			elif (age >= 13 and age <= 19):
+				return "teenager"
+			elif (age >= 20 and age < 60):
+				return "adult"
+			else:
+				return "senior"
+
+		get_age_group = udf(getAgeGroup, StringType())
+
+		df4 = df3.withColumn("ageGroup", get_age_group(col("age")) )
+
+		df4.show()
+
+		----------------------------------------
+
+		@udf (returnType = StringType())
+		def getAgeGroup( age ):
+			if (age <= 12):
+				return "child"
+			elif (age >= 13 and age <= 19):
+				return "teenager"
+			elif (age >= 20 and age < 60):
+				return "adult"
+			else:
+				return "senior"
+
+		df4 = df3.withColumn("ageGroup", getAgeGroup(col("age")) )
+	
+		--------------------------------------------
+		# applying UDF in SQL
+
+		def getAgeGroup( age ):
+			if (age <= 12):
+				return "child"
+			elif (age >= 13 and age <= 19):
+				return "teenager"
+			elif (age >= 20 and age < 60):
+				return "adult"
+			else:
+				return "senior"
+
+
+		spark.udf.register("get_age_group", getAgeGroup, StringType())
+		
+		spark.catalog.listFunctions()
+
+		qry = "select id, name, age, get_age_group(age) as ageGroup from users"
+
+		df5 = spark.sql(qry)
+		df5.show()
+
 
 
 
