@@ -1020,6 +1020,186 @@
 		df5 = spark.sql(qry)
 		df5.show()
 
+   9. drop	=> drops/excludes the specified columns
+
+
+		df3 = df2.drop("newCount", "highFrequency")
+
+		df3.printSchema()
+		df3.show(4)
+
+
+   10.  dropna	=> drops the Rows that has null values in any column or specified columns
+	fillna  => fills with specified values of Rows that has null values in any column or specified columns
+
+		usersDf = spark.read.json("E:\\PySpark\\data\\users.json")
+		usersDf.show()
+
+		df3 = usersDf.dropna()  # drop rows if there is null in any column
+		df3 = usersDf.dropna(subset=["phone", "age"])  # drop rows if there is null in phone or age columns
+
+		df3.show()
+
+		-------------------------
+		userDf2 = usersDf \
+    		.fillna("0000000000", subset=["phone"]) \
+    		.fillna("ANONYMOUS", subset=["name"]) \
+    		.fillna(0)
+
+
+   11. dropDuplicates => drop duplicates based on any column or specified columns
+
+
+		listUsers = [(1, "Raju", 5),
+					 (1, "Raju", 5),
+					 (3, "Raju", 5),
+					 (4, "Raghu", 35),
+					 (4, "Raghu", 35),
+					 (6, "Raghu", 35),
+					 (7, "Ravi", 70)]
+
+		df3 = spark.createDataFrame(listUsers, ["id", "name", "age"])
+		df3.show()
+
+		df4 = df3.dropDuplicates()
+		df4 = df3.dropDuplicates(["name","age"])
+
+		df4.show()
+
+
+   12. distinct => returns distinct rows
+
+		listUsers = [(1, "Raju", 5),
+			(1, "Raju", 5),
+			(3, "Raju", 5),
+			(4, "Raghu", 35),
+			(4, "Raghu", 35),
+			(6, "Raghu", 35),
+			(7, "Ravi", 35)]
+
+
+		df3 = spark.createDataFrame(listUsers, ["id", "name", "age"])
+		df3.show()
+
+		df4 = df3.distinct()
+		df4.show() 
+
+
+      Q. How many unique DEST_COUNTRY_NAME values are there in df1??	
+
+		df1.select("DEST_COUNTRY_NAME").distinct().count()
+		df1.dropDuplicates(["DEST_COUNTRY_NAME"]).count()
+
+
+   13. randomSplit
+
+		dfList = df1.randomSplit([0.5, 0.5], 464)
+		print( dfList[0].count(), dfList[1].count() )
+
+   14. sample
+   
+		df2 = df1.sample(True, 0.65)		# with-replacement sampling
+		df2 = df1.sample(True, 1.65)		# fraction > 1 is allowed
+		df2 = df1.sample(True, 0.65, 42342)	# 42342 is a seed
+
+		df2 = df1.sample(False, 0.65)		# without-replacement sampling
+		df2 = df1.sample(False, 1.65)		# ERROR: fraction > 1 is NOT allowed
+		df2 = df1.sample(False, 0.65, 42342)    # 42342 is a seed
+
+
+   15. union, intersect, subtract
+
+		df4 = df2.union(df3)
+		df4.show()
+		df4.count()
+		df4.rdd.getNumPartitions()
+		df4.write.mode("overwrite").csv("E:\\PySpark\\output\\union")
+
+		df5 = df4.intersect(df3)
+		df5.show()
+		df5.rdd.getNumPartitions()
+
+		df6 = df4.subtract(df3)
+		df6.show()
+		df6.rdd.getNumPartitions()
+
+   16. repartition
+
+		df2 = df1.repartition(6)
+		df2.rdd.getNumPartitions()
+
+		df3 = df2.repartition(3)
+		df3.rdd.getNumPartitions()
+
+		df4 = df2.repartition(4, col("DEST_COUNTRY_NAME"))
+		df4.rdd.getNumPartitions()
+
+		df5 = df2.repartition(col("DEST_COUNTRY_NAME"))
+		df5.rdd.getNumPartitions()
+
+   17. coalesce
+
+		df6 = df2.coalesce(10)  # df2 - 6 partitions
+		df6.rdd.getNumPartitions()
+
+
+   18.  Window functions  (refer to Databricks notebook)
+
+
+   19. join  -> discussed as a separate topic.  
+
+
+
+
+  DataFrame Joins
+  ---------------
+
+     Supported Joins:  inner, left, right, full, semi (left_semi), anti (left_anti), cross
+
+     left_semi join
+     ---------------
+	-> Similar to inner join but the data comes only from the left side table.
+	-> Equivalent to the following subquery:
+
+		select * from emp where deptid IN (select id from dept)	 
+
+     left_anti join
+     ---------------
+	-> Equivalent to the following subquery:
+
+		select * from emp where deptid NOT IN (select id from dept)	 
+       
+
+  		===== sample code =====
+
+		employee = spark.createDataFrame([
+			(1, "Raju", 25, 101),
+			(2, "Ramesh", 26, 101),
+			(3, "Amrita", 30, 102),
+			(4, "Madhu", 32, 102),
+			(5, "Aditya", 28, 102),
+			(6, "Pranav", 28, 10000)])\
+		  .toDF("id", "name", "age", "deptid")  
+		  
+		department = spark.createDataFrame([
+			(101, "IT", 1),
+			(102, "ITES", 1),
+			(103, "Opearation", 1),
+			(104, "HRD", 2)])\
+		  .toDF("id", "deptname", "locationid")  
+		  
+		  
+		employee.show()
+		department.show()
+
+		spark.catalog.listTables()
+
+		spark.catalog.dropTempView("dept")
+
+
+		joinCol = employee.deptid == department.id
+		joinedDf = employee.join(department, joinCol, "left_anti")
+		joinedDf.show()
 
 
 
