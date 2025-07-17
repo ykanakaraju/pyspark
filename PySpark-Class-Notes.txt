@@ -419,6 +419,143 @@
 			each partition, and then, across the reduced values of all partitions. 
 
 
+   Spark Executor Memory Structure
+   -------------------------------   
+  
+      Let us say we are requesting an executor with 10 GB RAM. 
+      The spark job will be allocated executors with 10.3 GB (10GB + 300MB) RAM. 
+      
+      1. Reserved Memory (300 MB)
+           -> Spark's internal usage
+      
+      2. Spark Memory (spark.memory.fraction: 0.6)   => 6 GB (Unified Memory)
+          
+         2.1  Execution Memory
+                 -> Used for RDD partition creation and transformation
+                 -> Can forcibly evict RDD partitions from storage memory if it requires
+                    additional memory upto the quota allocated for it.
+
+         2.2  Storage Memory (spark.memory.storageFraction: 0.5) => 3 GB
+                 -> The RDD partitions and broadcast variables are persisted
+                    in this memory.
+
+      3. User Memory  => 4 GB
+         -> Running non-spark related code execution. 
+         -> Related to running python methods, storing python collection.
+
+ 
+  RDD Persistence
+  ---------------
+	rdd1 = sc.textFile(<path>, 10)
+	rdd2 = rdd1.t2(...)
+	rdd3 = rdd1.t3(...)
+	rdd4 = rdd3.t4(...)
+	rdd5 = rdd3.t5(...)
+	rdd6 = rdd5.t6(...)
+	rdd6.persist( StorageLevel.MEMORY_AND_DISK )  -> instruction to spark to save the partitions of rdd6
+	rdd7 = rdd6.t7(...)
+
+	rdd6.collect()
+	DAG of rdd6: (10) rdd6 -> rdd5.t6 -> rdd3.t5 -> rdd1.t3 -> sc.textFile
+		[ sc.textFile, t3, t5, t6 ]  ==> sent to driver
+
+	rdd7.collect()
+	DAG of rdd6: (10) rdd7 -> rdd6.t7
+		[ t7 ]  ==> sent to driver
+
+	rdd6.unpersist()
+
+   Storage Levels
+   --------------	
+	MEMORY_ONLY		-> Memory Serialized 1x Replicated
+	MEMORY_AND_DISK		-> Disk Memory Serialized 1x Replicated
+	DISK_ONLY		-> Disk Serialized 1x Replicated
+	MEMORY_ONLY_2		-> Memory Serialized 2x Replicated
+	MEMORY_AND_DISK_2	-> Disk Memory Serialized 2x Replicated	
+
+   Commands
+   --------
+	rdd1.cache() 	-> in-memory persistence
+	rdd1.persist()  -> in-memory persistence
+	rdd1.persist( StorageLevel.MEMORY_AND_DISK )
+
+	rdd1.unpersist()
+
+
+   Spark Closures
+   ---------------
+	
+	In Spark, a closure constitutes all the variables and methods which must be visible 
+	for the executor to perform its computations on the RDD. 
+
+	This closure is serialized and a separate copy sent to each executor.
+
+
+	c = 0  
+
+	def is_prime(n):
+	   return True / False; 
+	
+	def f1(n):
+	  global c
+	  if (is_prime(n)) c += 1	  
+	  return n*2 
+    
+
+	rdd1 = sc.parallelize(range(4001), 4)
+	rdd2 = rdd1.map( f1 )
+	rdd2.collect()
+
+	print(c)    # 0
+	
+	Limitation: We can not use local variables to implement global counters
+	Solution: Use 'Accumulator' variables.	
+
+ 
+  
+   Spark Shared Variables
+   ----------------------
+
+    1. Accumulator variable
+
+	-> Is a shared variable, not part of a closure
+	-> Not a local copy
+	-> One variable maintained by the driver
+	-> All tasks can add to this variable (the driver copy is updated)
+	-> Is used to implement "global counter"
+   
+	c = sc.accumulator(0)  
+
+	def is_prime(n):
+	   return True / False; 
+	
+	def f1(n):
+	  global c
+	  if (is_prime(n)) c.add(1)	  
+	  return n*2     
+
+	rdd1 = sc.parallelize(range(4001), 4)
+	rdd2 = rdd1.map( f1 )
+	rdd2.collect()
+
+	print(c)    # 0
+
+  
+   2. Broadcast Variable
+
+	-> Is a shared variable that is not part of the closure
+	-> Variable is broadcasted to each executor node.
+	-> All tasks in that executor can read from that copy.	
+
+	d = { 1:a, 2:b, 3:c, 4:d, 5:e, .... }     # 100 MB
+
+	def f1(n):
+	  global d
+	  return d[n]
+
+	rdd1 = sc.parallelize([1,2,3,4,5,...], 4)
+	rdd2 = rdd1.map(f1)	
+	rdd2.collect()
 
 
 
@@ -432,14 +569,7 @@
 
 
 
-
-
-
-
-
-
-
-
+	
 
 
 	
