@@ -12,7 +12,6 @@
    Spark Streaming
 	-> Structured Streaming
 
-
   Materials
   ---------
 	=> PDF Presentations
@@ -20,7 +19,6 @@
 	=> Databricks Notebooks 
 	=> Class Notes
         => Github: https://github.com/ykanakaraju/pyspark 
-
 
   Spark
   -----
@@ -62,16 +60,15 @@
 	Spark download: https://spark.apache.org/downloads.html
 
 
-   2. Databricks Free Edition (preferred)
+   2. Databricks Free Edition
 
 
   Setting up PySpark on Windows machine
   -------------------------------------
 
-	1. Install Java 8 or up
+	1. Install Java 8  (JDK 1.8.xxx) or up
 
-		java -version
-		
+		java -version		
 		https://www.oracle.com/in/java/technologies/downloads/#jdk24-windows
 
 	2. Add JAVA_HOME environment variable
@@ -101,6 +98,9 @@
 		Download the repo
 		Extract it and copy the folder to your Spark path. 
 
+		You need winutils.exe & hadoop.dll
+		=> Add them to a "bin" folder in a suitable folder
+
 	6. Add HADOOP_HOME environment variable
 
 		Go to 'Edit system environemt variables' windows
@@ -128,9 +128,8 @@
 
    -> Click on https://www.databricks.com/try-databricks
    -> Click on "Try Databricks" button (top-right corner)
-   -> Click on "Click here" link towards the bottom
-	** Looking for Databricks Free Edition? Click here
-   -> Provide a valid email address 
+   -> Choose "Databricks Free Edition" option (not free trial)
+   -> Provide a valid email address 	
    -> Enter the validation code sent to the email to login to Databricks free edition
 
 	-> Login link: http://login.databricks.com
@@ -181,8 +180,8 @@
 	   -> Action commands trigger execution. 
 
 
-   Creating RDDs
-   -------------
+  Creating RDDs
+  -------------
     Three ways:
 
 	1. Creating an RDD from external data file
@@ -205,8 +204,8 @@
 		rdd2 = rdd1.map(lambda x: x*10)
 
 
-   RDD Operations
-   --------------
+  RDD Operations
+  --------------
 
     Two types of operations
 
@@ -268,7 +267,6 @@
 		|--> Stages (each wide transformation in the RDD DAG of a job causes stage transition)
 			|
 			|--> Tasks (each task has multiple transformations that run in parallel)
-
 
 
   RDD Transformations
@@ -410,7 +408,6 @@
 
 		rdd2 = rdd1.coalesce(5)
 
-
 		Recommendations
 		---------------
 		-> The size of each partition should be 128 MB (or between 100 MB and 500 MB)
@@ -469,6 +466,43 @@
    11. saveAsSequenceFile
 
 	rddWc.saveAsSequenceFile("/FileStore/output/seq")
+
+
+
+   Case Study
+   ----------		
+	dataset: https://github.com/ykanakaraju/pyspark/blob/master/data_git/cars.tsv
+
+	From cars.tsv dataset, get the average weight of all the models of each make of American origin cars. 
+	-> Arrange in the DESC order of average weight. 
+        -> Save the output as a single text file. 
+		
+	=> Try yourself
+
+
+  Spark Executor Memory Structure
+  -------------------------------   
+  
+      Let us say we are requesting an executor with 10 GB RAM. 
+      The spark job will be allocated executors with 10.3 GB (10GB + 300MB) RAM. 
+      
+      1. Reserved Memory (300 MB)
+           -> Spark's internal usage
+      
+      2. Spark Memory (spark.memory.fraction: 0.6)   => 6 GB (Unified Memory)
+          
+         2.1  Execution Memory
+                 -> Used for RDD partition creation and transformation
+                 -> Can forcibly evict RDD partitions from storage memory if it requires
+                    additional memory upto the quota allocated for it.
+
+         2.2  Storage Memory (spark.memory.storageFraction: 0.5) => 3 GB
+                 -> The RDD partitions and broadcast variables are persisted
+                    in this memory.
+
+      3. User Memory  => 4 GB
+         -> Running non-spark related code execution. 
+         -> Related to running python methods, storing python collection.
 
 
   RDD Persistence
@@ -814,11 +848,6 @@
 
 	write
 		df1.write.text(outputPath)
-
-
-
-
-
 
 
   Creating an RDD from DataFrame
@@ -1236,5 +1265,24 @@
 	ForEachBatch sink
 	ForEach sink 
 	Memory sink
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
