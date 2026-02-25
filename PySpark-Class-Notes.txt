@@ -16,7 +16,7 @@
   ---------
 	=> PDF Presentations
 	=> Code Modules 
-	=> Databricks Notebooks 
+	=> Databricks Notebooks (Spark SQL)
 	=> Class Notes
         => Github: https://github.com/ykanakaraju/pyspark 
 
@@ -66,6 +66,9 @@
   Setting up PySpark on Windows machine
   -------------------------------------
 
+	Pre-requisite: Make sure you have python installed.
+	https://community.cloudera.com/t5/Community-Articles/Spark-Python-Supportability-Matrix/ta-p/379144
+
 	1. Install Java 8 (JDK 1.8.xxx) or up
 
 		java -version		
@@ -90,6 +93,8 @@
 
 		Go to 'Edit system environemt variables' windows
 		Add SPARK_HOME env. variable with the PATH were Spark is extracted.
+
+		Ex: SPARK_HOME => E:\Spark\spark-3.5.7-bin-hadoop3
 
 	5. Setup Hadoop winutils for windows 
 
@@ -124,6 +129,9 @@
 
 	11. Set PYTHONPATH env. variable
 		%SPARK_HOME%\python;%SPARK_HOME%\python\lib\py4j-0.10.9.7-src;%PYTHONPATH%
+
+	Ref Link: https://github.com/ykanakaraju/pyspark/blob/master/Pyspark-JupyterNotebooks-Windows-Setup.pdf
+
 
 
   Getting started with Spark on Databricks Free Edition
@@ -1263,6 +1271,24 @@
 	ForEachBatch sink
 	ForEach sink 
 	Memory sink
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
