@@ -12,7 +12,6 @@
    Spark Streaming
 	-> Structured Streaming
 
-
   Materials
   ---------
 	=> PDF Presentations
@@ -20,7 +19,6 @@
 	=> Databricks Notebooks (Spark SQL)
 	=> Class Notes
         => Github: https://github.com/ykanakaraju/pyspark 
-
 
   Spark
   -----
@@ -1271,6 +1269,17 @@
 	ForEachBatch sink
 	ForEach sink 
 	Memory sink
+
+
+
+
+
+
+
+
+
+
+
 
 
 
